@@ -4,12 +4,12 @@
 /// be converted (using `complete`) into a final value.
 ///
 /// [fold]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.fold
-pub trait Folder<Item>: Sized {
+pub trait Folder<I>: Sized {
     /// The type of result that will ultimately be produced by the folder.
     type Result;
 
     /// Consume next item and return new sequential state.
-    fn consume(self, item: Item) -> Self;
+    fn consume(self, item: I) -> Self;
 
     /// Consume items from the iterator until full, and return new sequential state.
     ///
@@ -19,16 +19,18 @@ pub trait Folder<Item>: Sized {
     ///
     /// The main reason to override it is if you can provide a more
     /// specialized, efficient implementation.
-    fn consume_iter<I>(mut self, iter: I) -> Self
+    fn consume_iter<X>(mut self, iter: X) -> Self
     where
-        I: IntoIterator<Item = Item>,
+        X: IntoIterator<Item = I>,
     {
         for item in iter {
             self = self.consume(item);
+
             if self.is_full() {
                 break;
             }
         }
+
         self
     }
 

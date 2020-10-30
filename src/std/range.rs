@@ -1,8 +1,6 @@
 use std::ops::Range;
 
-use crate::{
-    Consumer, Executor, Folder, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
-};
+use crate::{Consumer, Folder, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback, Executor, Reducer, ExecutorCallback};
 
 pub struct Iter {
     range: Range<usize>,
@@ -24,12 +22,14 @@ impl IntoParallelIterator for Range<usize> {
 impl ParallelIterator for Iter {
     type Item = usize;
 
-    fn drive<E, C>(self, executor: E, consumer: C) -> E::Result
+    fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<Self, C>,
-        C: Consumer<Self::Item>,
+        E: Executor<D>,
+        C: Consumer<Self::Item, Result = D, Reducer = R>,
+        D: Send,
+        R: Reducer<D>
     {
-        executor.exec(self, consumer)
+        self.with_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint_opt(&self) -> Option<usize> {
@@ -46,6 +46,11 @@ impl ParallelIterator for Iter {
 
 impl Producer for IterProducer {
     type Item = usize;
+    type IntoIter = Range<usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.range
+    }
 
     fn split(mut self) -> (Self, Option<Self>) {
         let index = self.range.len() / 2;

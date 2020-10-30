@@ -1,17 +1,15 @@
-use crate::{
-    core::{Collector, Executor},
-    Consumer, Folder, ParallelIterator,
-};
+use crate::{core::Driver, Consumer, Folder, ParallelIterator, Executor};
 
 use super::noop::NoOpReducer;
 
-pub struct ForEach<I, F> {
-    iterator: I,
-    operation: F,
+pub struct ForEach<X, O> {
+    iterator: X,
+    operation: O,
 }
 
-impl<I, F> ForEach<I, F> {
-    pub fn new(iterator: I, operation: F) -> Self {
+impl<X, O> ForEach<X, O>
+{
+    pub fn new(iterator: X, operation: O) -> Self {
         Self {
             iterator,
             operation,
@@ -19,17 +17,13 @@ impl<I, F> ForEach<I, F> {
     }
 }
 
-impl<I, F> Collector for ForEach<I, F>
+impl<X, O> Driver<()> for ForEach<X, O>
 where
-    I: ParallelIterator,
-    F: Fn(I::Item) + Sync + Send + Copy,
+    X: ParallelIterator,
+    O: Fn(X::Item) + Clone + Send,
 {
-    type Iterator = I;
-    type Consumer = ForEachConsumer<F>;
-
     fn exec_with<E>(self, executor: E) -> E::Result
-    where
-        E: Executor<Self::Iterator, Self::Consumer>,
+    where E: Executor<()>
     {
         let iterator = self.iterator;
         let operation = self.operation;
@@ -40,22 +34,22 @@ where
     }
 }
 
-pub struct ForEachConsumer<F> {
-    operation: F,
+pub struct ForEachConsumer<O> {
+    operation: O,
 }
 
-impl<F, T> Consumer<T> for ForEachConsumer<F>
+impl<O, I> Consumer<I> for ForEachConsumer<O>
 where
-    F: Fn(T) + Sync + Send + Copy,
+    O: Fn(I) + Clone + Send,
 {
-    type Folder = ForEachConsumer<F>;
+    type Folder = ForEachConsumer<O>;
     type Reducer = NoOpReducer;
     type Result = ();
 
     fn split_off_left(&self) -> (Self, NoOpReducer) {
         (
             ForEachConsumer {
-                operation: self.operation,
+                operation: self.operation.clone(),
             },
             NoOpReducer,
         )
@@ -66,23 +60,23 @@ where
     }
 }
 
-impl<F, T> Folder<T> for ForEachConsumer<F>
+impl<O, I> Folder<I> for ForEachConsumer<O>
 where
-    F: Fn(T) + Sync + Send + Copy,
+    O: Fn(I),
 {
     type Result = ();
 
-    fn consume(self, item: T) -> Self {
+    fn consume(self, item: I) -> Self {
         (self.operation)(item);
 
         self
     }
 
-    fn consume_iter<I>(self, iter: I) -> Self
+    fn consume_iter<X>(self, iter: X) -> Self
     where
-        I: IntoIterator<Item = T>,
+        X: IntoIterator<Item = I>,
     {
-        iter.into_iter().for_each(self.operation);
+        iter.into_iter().for_each(&self.operation);
 
         self
     }
@@ -97,11 +91,14 @@ mod tests {
 
     #[test]
     fn test_for_each() {
-        (0..10usize)
+        let x = (0..10usize)
             .into_par_iter()
-            .for_each(&|j| {
-                println!("{}", j);
+            .map(Some)
+            .for_each(|j| {
+                println!("{:?}", j);
             })
             .exec();
+
+        dbg!(x);
     }
 }

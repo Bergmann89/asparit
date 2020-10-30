@@ -1,6 +1,6 @@
-use super::{Consumer, Executor, IndexedConsumer, IndexedProducerCallback, ProducerCallback};
+use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer};
 
-use crate::inner::for_each::ForEach;
+use crate::inner::{for_each::ForEach, map::Map};
 
 /// Parallel version of the standard iterator trait.
 ///
@@ -36,10 +36,12 @@ pub trait ParallelIterator: Sized + Send {
     /// iterators.
     ///
     /// [README]: README.md
-    fn drive<E, C>(self, executor: E, consumer: C) -> E::Result
+    fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<Self, C>,
-        C: Consumer<Self::Item>;
+        E: Executor<D>,
+        C: Consumer<Self::Item, Result = D, Reducer = R>,
+        D: Send,
+        R: Reducer<D>;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -87,11 +89,33 @@ pub trait ParallelIterator: Sized + Send {
     ///
     /// (0..100).into_par_iter().for_each(|x| println!("{:?}", x));
     /// ```
-    fn for_each<F>(self, operation: F) -> ForEach<Self, F>
+    fn for_each<O>(self, operation: O) -> ForEach<Self, O>
     where
-        F: Fn(Self::Item) + Sync + Send,
+        O: Fn(Self::Item),
     {
         ForEach::new(self, operation)
+    }
+
+    /// Applies `map_op` to each item of this iterator, producing a new
+    /// iterator with the results.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let mut par_iter = (0..5).into_par_iter().map(|x| x * 2);
+    ///
+    /// let doubles: Vec<_> = par_iter.collect();
+    ///
+    /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
+    /// ```
+    fn map<O, T>(self, operation: O) -> Map<Self, O>
+    where
+        O: Fn(Self::Item) -> T + Sync + Send,
+        T: Send,
+    {
+        Map::new(self, operation)
     }
 }
 
@@ -101,22 +125,6 @@ pub trait ParallelIterator: Sized + Send {
 ///
 /// **Note:** Not implemented for `u64`, `i64`, `u128`, or `i128` ranges
 pub trait IndexedParallelIterator: ParallelIterator {
-    /// Produces an exact count of how many items this iterator will
-    /// produce, presuming no panic occurs.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use asparit::*;
-    ///
-    /// let par_iter = (0..100).into_par_iter().zip(vec![0; 10]);
-    /// assert_eq!(par_iter.len(), 10);
-    ///
-    /// let vec: Vec<_> = par_iter.collect();
-    /// assert_eq!(vec.len(), 10);
-    /// ```
-    fn len_hint(&self) -> usize;
-
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
     ///
@@ -131,9 +139,12 @@ pub trait IndexedParallelIterator: ParallelIterator {
     /// iterators.
     ///
     /// [README]: README.md
-    fn drive_indexed<C>(self, consumer: C) -> C::Result
+    fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        C: IndexedConsumer<Self::Item>;
+        E: Executor<D>,
+        C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
+        D: Send,
+        R: Reducer<D>;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -153,4 +164,20 @@ pub trait IndexedParallelIterator: ParallelIterator {
     fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<Self::Item>;
+
+    /// Produces an exact count of how many items this iterator will
+    /// produce, presuming no panic occurs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use asparit::*;
+    ///
+    /// let par_iter = (0..100).into_par_iter().zip(vec![0; 10]);
+    /// assert_eq!(par_iter.len(), 10);
+    ///
+    /// let vec: Vec<_> = par_iter.collect();
+    /// assert_eq!(vec.len(), 10);
+    /// ```
+    fn len_hint(&self) -> usize;
 }

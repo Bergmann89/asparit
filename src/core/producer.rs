@@ -12,14 +12,26 @@ pub trait Producer: Send + Sized {
     /// The type of item returned by this producer.
     type Item;
 
+    /// The type of iterator we will become.
+    type IntoIter: Iterator<Item = Self::Item>;
+
+    /// Convert `self` into an iterator; at this point, no more parallel splits
+    /// are possible.
+    fn into_iter(self) -> Self::IntoIter;
+
     /// Split midway into a new producer if possible, otherwise return `None`.
     fn split(self) -> (Self, Option<Self>);
 
     /// Iterate the producer, feeding each element to `folder`, and
     /// stop when the folder is full (or all elements have been consumed).
+    ///
+    /// The provided implementation is sufficient for most iterables.
     fn fold_with<F>(self, folder: F) -> F
     where
-        F: Folder<Self::Item>;
+        F: Folder<Self::Item>,
+    {
+        folder.consume_iter(self.into_iter())
+    }
 }
 
 /// A `Producer` is effectively a "splittable `IntoIterator`". That
@@ -107,7 +119,7 @@ pub trait IndexedProducer: Send + Sized {
 ///
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md#producer-callback
 /// [FnOnce]: https://doc.rust-lang.org/std/ops/trait.FnOnce.html
-pub trait ProducerCallback<T> {
+pub trait ProducerCallback<I> {
     /// The type of value returned by this callback. Analogous to
     /// [`Output` from the `FnOnce` trait][Output].
     ///
@@ -119,7 +131,7 @@ pub trait ProducerCallback<T> {
     /// `P`, and hence implementors must be defined for any producer.
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: Producer<Item = T>;
+        P: Producer<Item = I>;
 }
 
 /// The `IndexedProducerCallback` trait is a kind of generic closure,
@@ -128,7 +140,7 @@ pub trait ProducerCallback<T> {
 ///
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md#producer-callback
 /// [FnOnce]: https://doc.rust-lang.org/std/ops/trait.FnOnce.html
-pub trait IndexedProducerCallback<T> {
+pub trait IndexedProducerCallback<I> {
     /// The type of value returned by this callback. Analogous to
     /// [`Output` from the `FnOnce` trait][Output].
     ///
@@ -140,5 +152,5 @@ pub trait IndexedProducerCallback<T> {
     /// `P`, and hence implementors must be defined for any producer.
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: IndexedProducer<Item = T>;
+        P: IndexedProducer<Item = I>;
 }

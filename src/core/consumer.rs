@@ -14,9 +14,9 @@ use super::{Folder, Reducer};
 /// [fold]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.fold
 /// [`Folder`]: trait.Folder.html
 /// [`Producer`]: trait.Producer.html
-pub trait Consumer<Item>: Send + Sized {
+pub trait Consumer<I>: Send + Sized {
     /// The type of folder that this consumer can be converted into.
-    type Folder: Folder<Item, Result = Self::Result>;
+    type Folder: Folder<I, Result = Self::Result>;
 
     /// The type of reducer that is produced if this consumer is split.
     type Reducer: Reducer<Self::Result>;
@@ -47,7 +47,7 @@ pub trait Consumer<Item>: Send + Sized {
 /// A stateless consumer can be freely copied. These consumers can be
 /// used like regular consumers, but they also support a
 /// `split_at` method that does take an index to split.
-pub trait IndexedConsumer<Item>: Consumer<Item> {
+pub trait IndexedConsumer<I>: Consumer<I> {
     /// Divide the consumer into two consumers, one processing items
     /// `0..index` and one processing items from `index..`. Also
     /// produces a reducer that can be used to reduce the results at
