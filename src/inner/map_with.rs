@@ -188,9 +188,9 @@ where
         )
     }
 
-    fn fold_with<G>(self, folder: G) -> G
+    fn fold_with<F>(self, folder: F) -> F
     where
-        G: Folder<Self::Item>,
+        F: Folder<Self::Item>,
     {
         let folder = MapWithFolder {
             base: folder,
@@ -253,9 +253,9 @@ where
         )
     }
 
-    fn fold_with<G>(self, folder: G) -> G
+    fn fold_with<F>(self, folder: F) -> F
     where
-        G: Folder<Self::Item>,
+        F: Folder<Self::Item>,
     {
         let folder = MapWithFolder {
             base: folder,
@@ -269,10 +269,10 @@ where
 
 /* MapWithIter */
 
-struct MapWithIter<I, S, O> {
-    base: I,
-    item: S,
-    operation: O,
+pub struct MapWithIter<I, S, O> {
+    pub base: I,
+    pub item: S,
+    pub operation: O,
 }
 
 impl<I, S, O, T> Iterator for MapWithIter<I, S, O>
@@ -375,10 +375,10 @@ where
 
 /* MapWithFolder */
 
-struct MapWithFolder<F, S, O> {
-    base: F,
-    item: S,
-    operation: O,
+pub struct MapWithFolder<F, S, O> {
+    pub base: F,
+    pub item: S,
+    pub operation: O,
 }
 
 impl<I, T, F, S, O> Folder<I> for MapWithFolder<F, S, O>

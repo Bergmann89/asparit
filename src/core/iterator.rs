@@ -1,6 +1,6 @@
 use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer};
 
-use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith};
+use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith, map_init::MapInit};
 
 /// Parallel version of the standard iterator trait.
 ///
@@ -134,15 +134,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// let (sender, receiver) = channel();
     ///
     /// let a: Vec<_> = (0..5)
-    ///                 .into_par_iter()            // iterating over i32
-    ///                 .map_with(sender, |s, x| {
-    ///                     s.send(x).unwrap();     // sending i32 values through the channel
-    ///                     x                       // returning i32
-    ///                 })
-    ///                 .collect();                 // collecting the returned values into a vector
+    ///     .into_par_iter()            // iterating over i32
+    ///     .map_with(sender, |s, x| {
+    ///         s.send(x).unwrap();     // sending i32 values through the channel
+    ///         x                       // returning i32
+    ///     })
+    ///     .collect();                 // collecting the returned values into a vector
     ///
-    /// let mut b: Vec<_> = receiver.iter()         // iterating over the values in the channel
-    ///                             .collect();     // and collecting them
+    /// let mut b: Vec<_> = receiver
+    ///     .iter()                     // iterating over the values in the channel
+    ///     .collect();                 // and collecting them
     /// b.sort();
     ///
     /// assert_eq!(a, b);
@@ -154,6 +155,43 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         MapWith::new(self, init, operation)
+    }
+
+    /// Applies `operation` to a value returned by `init` with each item of this
+    /// iterator, producing a new iterator with the results.
+    ///
+    /// The `init` function will be called only as needed for a value to be
+    /// paired with the group of items in each rayon job.  There is no
+    /// constraint on that returned type at all!
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rand::Rng;
+    /// use rayon::prelude::*;
+    ///
+    /// let a: Vec<_> = (1i32..1_000_000)
+    ///     .into_par_iter()
+    ///     .map_init(
+    ///         || rand::thread_rng(),  // get the thread-local RNG
+    ///         |rng, x| if rng.gen() { // randomly negate items
+    ///             -x
+    ///         } else {
+    ///             x
+    ///         },
+    ///     ).collect();
+    ///
+    /// // There's a remote chance that this will fail...
+    /// assert!(a.iter().any(|&x| x < 0));
+    /// assert!(a.iter().any(|&x| x > 0));
+    /// ```
+    fn map_init<O, T, S, U>(self, init: S, operation: O) -> MapInit<Self, S, O>
+    where
+        O: Fn(&mut U, Self::Item) -> T + Sync + Send,
+        S: Fn() -> U + Sync + Send,
+        T: Send,
+    {
+        MapInit::new(self, init, operation)
     }
 }
 

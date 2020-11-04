@@ -91,9 +91,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_each() {
+        use ::std::sync::Arc;
+        use ::std::sync::atomic::{AtomicUsize, Ordering};
+
+        let i = Arc::new(AtomicUsize::new(0));
+
         let x = (0..10usize)
             .into_par_iter()
-            .map_with(5, |init, item| Some((*init, item)))
+            .map_init(move || { i.fetch_add(1, Ordering::Relaxed) }, |init, item| Some((*init, item)))
             .for_each(|j| {
                 println!("{:?}", j);
             })
