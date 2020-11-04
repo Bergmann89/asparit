@@ -10,7 +10,7 @@ struct IterProducer {
     range: Range<usize>,
 }
 
-impl IntoParallelIterator for Range<usize> {
+impl<'a> IntoParallelIterator<'a> for Range<usize> {
     type Iter = Iter;
     type Item = usize;
 
@@ -19,15 +19,15 @@ impl IntoParallelIterator for Range<usize> {
     }
 }
 
-impl ParallelIterator for Iter {
+impl<'a> ParallelIterator<'a> for Iter {
     type Item = usize;
 
     fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<D>,
-        C: Consumer<Self::Item, Result = D, Reducer = R>,
+        E: Executor<'a, D>,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
-        R: Reducer<D>
+        R: Reducer<D> + Send,
     {
         self.with_producer(ExecutorCallback::new(executor, consumer))
     }
@@ -38,7 +38,7 @@ impl ParallelIterator for Iter {
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: ProducerCallback<Self::Item>,
+        CB: ProducerCallback<'a, Self::Item>,
     {
         callback.callback(IterProducer { range: self.range })
     }

@@ -8,9 +8,9 @@ use super::ParallelIterator;
 ///
 /// [`ParallelIterator`]: trait.ParallelIterator.html
 /// [`std::iter::IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
-pub trait IntoParallelIterator {
+pub trait IntoParallelIterator<'a> {
     /// The parallel iterator type that will be created.
-    type Iter: ParallelIterator<Item = Self::Item>;
+    type Iter: ParallelIterator<'a, Item = Self::Item>;
 
     /// The type of item that the parallel iterator will produce.
     type Item: Send;
@@ -53,13 +53,13 @@ pub trait IntoParallelIterator {
 ///
 /// [`ParallelIterator`]: trait.ParallelIterator.html
 /// [`IntoParallelIterator`]: trait.IntoParallelIterator.html
-pub trait IntoParallelRefIterator<'data> {
+pub trait IntoParallelRefIterator<'a> {
     /// The type of the parallel iterator that will be returned.
-    type Iter: ParallelIterator<Item = Self::Item>;
+    type Iter: ParallelIterator<'a, Item = Self::Item>;
 
     /// The type of item that the parallel iterator will produce.
-    /// This will typically be an `&'data T` reference type.
-    type Item: Send + 'data;
+    /// This will typically be an `&'a T` reference type.
+    type Item: Send + 'a;
 
     /// Converts `self` into a parallel iterator.
     ///
@@ -76,7 +76,7 @@ pub trait IntoParallelRefIterator<'data> {
     /// assert!(v.par_iter().zip(&v)
     ///          .all(|(a, b)| std::ptr::eq(a, b)));
     /// ```
-    fn par_iter(&'data self) -> Self::Iter;
+    fn par_iter(&'a self) -> Self::Iter;
 }
 
 /// `IntoParallelRefMutIterator` implements the conversion to a
@@ -92,13 +92,13 @@ pub trait IntoParallelRefIterator<'data> {
 ///
 /// [`ParallelIterator`]: trait.ParallelIterator.html
 /// [`IntoParallelIterator`]: trait.IntoParallelIterator.html
-pub trait IntoParallelRefMutIterator<'data> {
+pub trait IntoParallelRefMutIterator<'a> {
     /// The type of iterator that will be created.
-    type Iter: ParallelIterator<Item = Self::Item>;
+    type Iter: ParallelIterator<'a, Item = Self::Item>;
 
     /// The type of item that will be produced; this is typically an
-    /// `&'data mut T` reference.
-    type Item: Send + 'data;
+    /// `&'a mut T` reference.
+    type Item: Send + 'a;
 
     /// Creates the parallel iterator from `self`.
     ///
@@ -111,10 +111,12 @@ pub trait IntoParallelRefMutIterator<'data> {
     /// v.par_iter_mut().enumerate().for_each(|(i, x)| *x = i);
     /// assert_eq!(v, [0, 1, 2, 3, 4]);
     /// ```
-    fn par_iter_mut(&'data mut self) -> Self::Iter;
+    fn par_iter_mut(&'a mut self) -> Self::Iter;
 }
 
-impl<T: ParallelIterator> IntoParallelIterator for T {
+impl<'a, T> IntoParallelIterator<'a> for T
+where T: ParallelIterator<'a>
+{
     type Iter = T;
     type Item = T::Item;
 
@@ -123,26 +125,28 @@ impl<T: ParallelIterator> IntoParallelIterator for T {
     }
 }
 
-impl<'data, I: 'data + ?Sized> IntoParallelRefIterator<'data> for I
+impl<'a, I> IntoParallelRefIterator<'a> for I
 where
-    &'data I: IntoParallelIterator,
+    I: 'a + ?Sized,
+    &'a I: IntoParallelIterator<'a>,
 {
-    type Iter = <&'data I as IntoParallelIterator>::Iter;
-    type Item = <&'data I as IntoParallelIterator>::Item;
+    type Iter = <&'a I as IntoParallelIterator<'a>>::Iter;
+    type Item = <&'a I as IntoParallelIterator<'a>>::Item;
 
-    fn par_iter(&'data self) -> Self::Iter {
+    fn par_iter(&'a self) -> Self::Iter {
         self.into_par_iter()
     }
 }
 
-impl<'data, I: 'data + ?Sized> IntoParallelRefMutIterator<'data> for I
+impl<'a, I> IntoParallelRefMutIterator<'a> for I
 where
-    &'data mut I: IntoParallelIterator,
+    I: 'a + ?Sized,
+    &'a mut I: IntoParallelIterator<'a>,
 {
-    type Iter = <&'data mut I as IntoParallelIterator>::Iter;
-    type Item = <&'data mut I as IntoParallelIterator>::Item;
+    type Iter = <&'a mut I as IntoParallelIterator<'a>>::Iter;
+    type Item = <&'a mut I as IntoParallelIterator<'a>>::Item;
 
-    fn par_iter_mut(&'data mut self) -> Self::Iter {
+    fn par_iter_mut(&'a mut self) -> Self::Iter {
         self.into_par_iter()
     }
 }

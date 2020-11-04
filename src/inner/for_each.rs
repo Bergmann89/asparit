@@ -17,13 +17,13 @@ impl<X, O> ForEach<X, O>
     }
 }
 
-impl<X, O> Driver<()> for ForEach<X, O>
+impl<'a, X, O> Driver<'a, ()> for ForEach<X, O>
 where
-    X: ParallelIterator,
-    O: Fn(X::Item) + Clone + Send,
+    X: ParallelIterator<'a>,
+    O: Fn(X::Item) + Clone + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
-    where E: Executor<()>
+    where E: Executor<'a, ()>
     {
         let iterator = self.iterator;
         let operation = self.operation;
@@ -89,15 +89,15 @@ mod tests {
     use super::*;
     use crate::*;
 
-    #[test]
-    fn test_for_each() {
+    #[tokio::test]
+    async fn test_for_each() {
         let x = (0..10usize)
             .into_par_iter()
             .map(Some)
             .for_each(|j| {
                 println!("{:?}", j);
             })
-            .exec();
+            .exec().await;
 
         dbg!(x);
     }

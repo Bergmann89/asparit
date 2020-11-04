@@ -16,20 +16,20 @@ impl<X, O> Map<X, O> {
     }
 }
 
-impl<X, O, T> ParallelIterator for Map<X, O>
+impl<'a, X, O, T> ParallelIterator<'a> for Map<X, O>
 where
-    X: ParallelIterator,
-    O: Fn(X::Item) -> T + Sync + Send + Copy,
+    X: ParallelIterator<'a>,
+    O: Fn(X::Item) -> T + Sync + Send + Copy + 'a,
     T: Send,
 {
     type Item = O::Output;
 
     fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<D>,
-        C: Consumer<Self::Item, Result = D, Reducer = R>,
+        E: Executor<'a, D>,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
-        R: Reducer<D>
+        R: Reducer<D> + Send,
     {
         let consumer = MapConsumer::new(consumer, self.operation);
 
@@ -38,7 +38,7 @@ where
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: ProducerCallback<Self::Item>,
+        CB: ProducerCallback<'a, Self::Item>,
     {
         self.base.with_producer(MapCallback {
             callback,
@@ -51,15 +51,15 @@ where
     }
 }
 
-impl<X, O, T> IndexedParallelIterator for Map<X, O>
+impl<'a, X, O, T> IndexedParallelIterator<'a> for Map<X, O>
 where
-    X: IndexedParallelIterator,
-    O: Fn(X::Item) -> T + Sync + Send + Copy,
+    X: IndexedParallelIterator<'a>,
+    O: Fn(X::Item) -> T + Sync + Send + Copy + 'a,
     T: Send,
 {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<D>,
+        E: Executor<'a, D>,
         C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
         D: Send,
         R: Reducer<D>
@@ -71,7 +71,7 @@ where
 
     fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
     where
-        CB: IndexedProducerCallback<Self::Item>,
+        CB: IndexedProducerCallback<'a, Self::Item>,
     {
         self.base.with_producer_indexed(MapCallback {
             callback,
@@ -91,17 +91,17 @@ struct MapCallback<CB, O> {
     operation: O,
 }
 
-impl<I, O, T, CB> ProducerCallback<I> for MapCallback<CB, O>
+impl<'a, I, O, T, CB> ProducerCallback<'a, I> for MapCallback<CB, O>
 where
-    CB: ProducerCallback<T>,
-    O: Fn(I) -> T + Sync + Send + Copy,
+    CB: ProducerCallback<'a, T>,
+    O: Fn(I) -> T + Sync + Send + Copy + 'a,
     T: Send,
 {
     type Output = CB::Output;
 
     fn callback<P>(self, base: P) -> CB::Output
     where
-        P: Producer<Item = I>,
+        P: Producer<Item = I> + 'a,
     {
         let producer = MapProducer {
             base,
@@ -112,17 +112,17 @@ where
     }
 }
 
-impl<I, O, T, CB> IndexedProducerCallback<I> for MapCallback<CB, O>
+impl<'a, I, O, T, CB> IndexedProducerCallback<'a, I> for MapCallback<CB, O>
 where
-    CB: IndexedProducerCallback<T>,
-    O: Fn(I) -> T + Sync + Send + Copy,
+    CB: IndexedProducerCallback<'a, T>,
+    O: Fn(I) -> T + Sync + Send + Copy + 'a,
     T: Send,
 {
     type Output = CB::Output;
 
     fn callback<P>(self, base: P) -> CB::Output
     where
-        P: IndexedProducer<Item = I>,
+        P: IndexedProducer<Item = I> + 'a,
     {
         let producer = MapProducer {
             base,
@@ -196,11 +196,19 @@ where
         self.base.into_iter().map(self.operation)
     }
 
-    fn min_len(&self) -> usize {
+    fn splits(&self) -> Option<usize> {
+        self.base.splits()
+    }
+
+    fn len(&self) -> usize {
+        self.base.len()
+    }
+
+    fn min_len(&self) -> Option<usize> {
         self.base.min_len()
     }
 
-    fn max_len(&self) -> usize {
+    fn max_len(&self) -> Option<usize> {
         self.base.max_len()
     }
 

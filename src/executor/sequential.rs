@@ -6,15 +6,15 @@ use crate::core::{
 #[derive(Default)]
 pub struct Sequential;
 
-impl<D> Executor<D> for Sequential
+impl<'a, D> Executor<'a, D> for Sequential
 where D: Send,
 {
     type Result = D;
 
     fn exec<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
-        P: Producer,
-        C: Consumer<P::Item, Result = D, Reducer = R>,
+        P: Producer + 'a,
+        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
         R: Reducer<D>,
     {
         if consumer.is_full() {

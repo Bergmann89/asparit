@@ -16,7 +16,7 @@ use crate::inner::{for_each::ForEach, map::Map};
 ///
 /// [iter]: index.html
 /// [`IndexedParallelIterator`]: trait.IndexedParallelIterator.html
-pub trait ParallelIterator: Sized + Send {
+pub trait ParallelIterator<'a>: Sized + Send {
     /// The type of item that this parallel iterator produces.
     /// For example, if you use the [`for_each`] method, this is the type of
     /// item that your closure will be invoked with.
@@ -38,10 +38,10 @@ pub trait ParallelIterator: Sized + Send {
     /// [README]: README.md
     fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<D>,
-        C: Consumer<Self::Item, Result = D, Reducer = R>,
+        E: Executor<'a, D>,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
-        R: Reducer<D>;
+        R: Reducer<D> + Send;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -60,7 +60,7 @@ pub trait ParallelIterator: Sized + Send {
     /// [README]: README.md
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: ProducerCallback<Self::Item>;
+        CB: ProducerCallback<'a, Self::Item>;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -124,7 +124,7 @@ pub trait ParallelIterator: Sized + Send {
 /// those points.
 ///
 /// **Note:** Not implemented for `u64`, `i64`, `u128`, or `i128` ranges
-pub trait IndexedParallelIterator: ParallelIterator {
+pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
     ///
@@ -141,7 +141,7 @@ pub trait IndexedParallelIterator: ParallelIterator {
     /// [README]: README.md
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
-        E: Executor<D>,
+        E: Executor<'a, D>,
         C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
         D: Send,
         R: Reducer<D>;
@@ -163,7 +163,7 @@ pub trait IndexedParallelIterator: ParallelIterator {
     /// [README]: README.md
     fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
     where
-        CB: IndexedProducerCallback<Self::Item>;
+        CB: IndexedProducerCallback<'a, Self::Item>;
 
     /// Produces an exact count of how many items this iterator will
     /// produce, presuming no panic occurs.

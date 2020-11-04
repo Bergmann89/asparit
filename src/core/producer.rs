@@ -19,6 +19,11 @@ pub trait Producer: Send + Sized {
     /// are possible.
     fn into_iter(self) -> Self::IntoIter;
 
+    /// Number of splits/threads this iterator will use to proceed.
+    fn splits(&self) -> Option<usize> {
+        None
+    }
+
     /// Split midway into a new producer if possible, otherwise return `None`.
     fn split(self) -> (Self, Option<Self>);
 
@@ -58,6 +63,7 @@ pub trait Producer: Send + Sized {
 ///
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md
 /// [20671]: https://github.com/rust-lang/rust/issues/20671
+#[allow(clippy::len_without_is_empty)]
 pub trait IndexedProducer: Send + Sized {
     /// The type of item that will be produced by this producer once
     /// it is converted into an iterator.
@@ -70,6 +76,15 @@ pub trait IndexedProducer: Send + Sized {
     /// are possible.
     fn into_iter(self) -> Self::IntoIter;
 
+    /// Number of splits/threads this iterator will use to proceed.
+    fn splits(&self) -> Option<usize> {
+        None
+    }
+
+    /// Produces an exact count of how many items this producer will
+    /// emit, presuming no panic occurs.
+    fn len(&self) -> usize;
+
     /// The minimum number of items that we will process
     /// sequentially. Defaults to 1, which means that we will split
     /// all the way down to a single item. This can be raised higher
@@ -80,8 +95,8 @@ pub trait IndexedProducer: Send + Sized {
     /// needed.
     ///
     /// [`with_min_len`]: ../trait.IndexedParallelIterator.html#method.with_min_len
-    fn min_len(&self) -> usize {
-        1
+    fn min_len(&self) -> Option<usize> {
+        None
     }
 
     /// The maximum number of items that we will process
@@ -93,8 +108,8 @@ pub trait IndexedProducer: Send + Sized {
     /// overhead, so this should not be needed.
     ///
     /// [`with_max_len`]: ../trait.IndexedParallelIterator.html#method.with_max_len
-    fn max_len(&self) -> usize {
-        usize::MAX
+    fn max_len(&self) -> Option<usize> {
+        None
     }
 
     /// Split into two producers; one produces items `0..index`, the
@@ -119,7 +134,7 @@ pub trait IndexedProducer: Send + Sized {
 ///
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md#producer-callback
 /// [FnOnce]: https://doc.rust-lang.org/std/ops/trait.FnOnce.html
-pub trait ProducerCallback<I> {
+pub trait ProducerCallback<'p, I> {
     /// The type of value returned by this callback. Analogous to
     /// [`Output` from the `FnOnce` trait][Output].
     ///
@@ -131,7 +146,7 @@ pub trait ProducerCallback<I> {
     /// `P`, and hence implementors must be defined for any producer.
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: Producer<Item = I>;
+        P: Producer<Item = I> + 'p;
 }
 
 /// The `IndexedProducerCallback` trait is a kind of generic closure,
@@ -140,7 +155,7 @@ pub trait ProducerCallback<I> {
 ///
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md#producer-callback
 /// [FnOnce]: https://doc.rust-lang.org/std/ops/trait.FnOnce.html
-pub trait IndexedProducerCallback<I> {
+pub trait IndexedProducerCallback<'p, I> {
     /// The type of value returned by this callback. Analogous to
     /// [`Output` from the `FnOnce` trait][Output].
     ///
@@ -152,5 +167,5 @@ pub trait IndexedProducerCallback<I> {
     /// `P`, and hence implementors must be defined for any producer.
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: IndexedProducer<Item = I>;
+        P: IndexedProducer<Item = I> + 'p;
 }

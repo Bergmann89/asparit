@@ -4,4 +4,11 @@ version = "0.1.0"
 authors = ["Bergmann89 <info@bergmann89.de>"]
 edition = "2018"
 
+[features]
+default = [ "tokio-executor" ]
+tokio-executor = [ "futures", "num_cpus", "tokio" ]
+
 [dependencies]
+futures = { version = "0.3", optional = true }
+num_cpus = { version = "1.13", optional = true }
+tokio = { version = "0.3", features = [ "macros", "rt-multi-thread" ], optional = true }

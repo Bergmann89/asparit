@@ -1,11 +1,11 @@
 use crate::{Executor, DefaultExecutor};
 
-pub trait Driver<D>: Sized
+pub trait Driver<'a, D>: Sized
 where D: Send,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
-    where E: Executor<D>;
+    where E: Executor<'a, D>;
 
-    fn exec(self) -> <DefaultExecutor as Executor<D>>::Result
+    fn exec(self) -> <DefaultExecutor as Executor<'a, D>>::Result
     { self.exec_with(DefaultExecutor::default()) }
 }
