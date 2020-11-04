@@ -1,6 +1,6 @@
 use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer};
 
-use crate::inner::{for_each::ForEach, map::Map};
+use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith};
 
 /// Parallel version of the standard iterator trait.
 ///
@@ -96,7 +96,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
         ForEach::new(self, operation)
     }
 
-    /// Applies `map_op` to each item of this iterator, producing a new
+    /// Applies `operation` to each item of this iterator, producing a new
     /// iterator with the results.
     ///
     /// # Examples
@@ -116,6 +116,44 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         Map::new(self, operation)
+    }
+
+    /// Applies `operation` to the given `init` value with each item of this
+    /// iterator, producing a new iterator with the results.
+    ///
+    /// The `init` value will be cloned only as needed to be paired with
+    /// the group of items in each rayon job.  It does not require the type
+    /// to be `Sync`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::mpsc::channel;
+    /// use rayon::prelude::*;
+    ///
+    /// let (sender, receiver) = channel();
+    ///
+    /// let a: Vec<_> = (0..5)
+    ///                 .into_par_iter()            // iterating over i32
+    ///                 .map_with(sender, |s, x| {
+    ///                     s.send(x).unwrap();     // sending i32 values through the channel
+    ///                     x                       // returning i32
+    ///                 })
+    ///                 .collect();                 // collecting the returned values into a vector
+    ///
+    /// let mut b: Vec<_> = receiver.iter()         // iterating over the values in the channel
+    ///                             .collect();     // and collecting them
+    /// b.sort();
+    ///
+    /// assert_eq!(a, b);
+    /// ```
+    fn map_with<O, T, S>(self, init: S, operation: O) -> MapWith<Self, S, O>
+    where
+        O: Fn(&mut S, Self::Item) -> T + Sync + Send,
+        S: Send + Clone,
+        T: Send,
+    {
+        MapWith::new(self, init, operation)
     }
 }
 

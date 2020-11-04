@@ -93,7 +93,7 @@ mod tests {
     async fn test_for_each() {
         let x = (0..10usize)
             .into_par_iter()
-            .map(Some)
+            .map_with(5, |init, item| Some((*init, item)))
             .for_each(|j| {
                 println!("{:?}", j);
             })

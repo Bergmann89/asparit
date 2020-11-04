@@ -19,7 +19,7 @@ impl<X, O> Map<X, O> {
 impl<'a, X, O, T> ParallelIterator<'a> for Map<X, O>
 where
     X: ParallelIterator<'a>,
-    O: Fn(X::Item) -> T + Sync + Send + Copy + 'a,
+    O: Fn(X::Item) -> T + Clone + Sync + Send + 'a,
     T: Send,
 {
     type Item = O::Output;
@@ -54,7 +54,7 @@ where
 impl<'a, X, O, T> IndexedParallelIterator<'a> for Map<X, O>
 where
     X: IndexedParallelIterator<'a>,
-    O: Fn(X::Item) -> T + Sync + Send + Copy + 'a,
+    O: Fn(X::Item) -> T + Clone + Sync + Send + 'a,
     T: Send,
 {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
@@ -94,7 +94,7 @@ struct MapCallback<CB, O> {
 impl<'a, I, O, T, CB> ProducerCallback<'a, I> for MapCallback<CB, O>
 where
     CB: ProducerCallback<'a, T>,
-    O: Fn(I) -> T + Sync + Send + Copy + 'a,
+    O: Fn(I) -> T + Clone + Sync + Send + 'a,
     T: Send,
 {
     type Output = CB::Output;
@@ -115,7 +115,7 @@ where
 impl<'a, I, O, T, CB> IndexedProducerCallback<'a, I> for MapCallback<CB, O>
 where
     CB: IndexedProducerCallback<'a, T>,
-    O: Fn(I) -> T + Sync + Send + Copy + 'a,
+    O: Fn(I) -> T + Clone + Sync + Send + 'a,
     T: Send,
 {
     type Output = CB::Output;
@@ -143,15 +143,14 @@ struct MapProducer<P, O> {
 impl<P, O, T> Producer for MapProducer<P, O>
 where
     P: Producer,
-    O: Fn(P::Item) -> T + Sync + Send + Copy,
+    O: Fn(P::Item) -> T + Clone + Sync + Send,
     T: Send,
 {
     type Item = O::Output;
     type IntoIter = std::iter::Map<P::IntoIter, O>;
 
     fn into_iter(self) -> Self::IntoIter {
-        // self.base.into_iter().map(self.operation)
-        unimplemented!()
+        self.base.into_iter().map(self.operation)
     }
 
     fn split(self) -> (Self, Option<Self>) {
@@ -161,7 +160,7 @@ where
         (
             MapProducer {
                 base: left,
-                operation,
+                operation: operation.clone(),
             },
             right.map(|right| MapProducer {
                 base: right,
@@ -186,7 +185,7 @@ where
 impl<P, O, T> IndexedProducer for MapProducer<P, O>
 where
     P: IndexedProducer,
-    O: Fn(P::Item) -> T + Sync + Send + Copy,
+    O: Fn(P::Item) -> T + Clone + Sync + Send,
     T: Send,
 {
     type Item = O::Output;
@@ -213,17 +212,16 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let operation = self.operation;
         let (left, right) = self.base.split_at(index);
 
         (
             MapProducer {
                 base: left,
-                operation,
+                operation: self.operation.clone(),
             },
             MapProducer {
                 base: right,
-                operation,
+                operation: self.operation,
             },
         )
     }
@@ -257,7 +255,7 @@ impl<C, O> MapConsumer<C, O> {
 impl<I, T, C, O> Consumer<I> for MapConsumer<C, O>
 where
     C: Consumer<O::Output>,
-    O: Fn(I) -> T + Send + Sync + Copy,
+    O: Fn(I) -> T + Clone + Send + Sync,
     T: Send,
 {
     type Folder = MapFolder<C::Folder, O>;
@@ -267,7 +265,7 @@ where
     fn split_off_left(&self) -> (Self, Self::Reducer) {
         let (left, reducer) = self.base.split_off_left();
 
-        (MapConsumer::new(left, self.operation), reducer)
+        (MapConsumer::new(left, self.operation.clone()), reducer)
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -285,14 +283,14 @@ where
 impl<I, T, C, O> IndexedConsumer<I> for MapConsumer<C, O>
 where
     C: IndexedConsumer<O::Output>,
-    O: Fn(I) -> T + Send + Sync + Copy,
+    O: Fn(I) -> T + Clone + Send + Sync,
     T: Send,
 {
     fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
         let (left, right, reducer) = self.base.split_at(index);
 
         (
-            MapConsumer::new(left, self.operation),
+            MapConsumer::new(left, self.operation.clone()),
             MapConsumer::new(right, self.operation),
             reducer,
         )
@@ -309,23 +307,23 @@ struct MapFolder<F, O> {
 impl<I, T, F, O> Folder<I> for MapFolder<F, O>
 where
     F: Folder<O::Output>,
-    O: Fn(I) -> T + Copy,
+    O: Fn(I) -> T + Clone,
 {
     type Result = F::Result;
 
-    fn consume(self, item: I) -> Self {
+    fn consume(mut self, item: I) -> Self {
         let mapped_item = (self.operation)(item);
-        MapFolder {
-            base: self.base.consume(mapped_item),
-            operation: self.operation,
-        }
+
+        self.base = self.base.consume(mapped_item);
+
+        self
     }
 
     fn consume_iter<X>(mut self, iter: X) -> Self
     where
         X: IntoIterator<Item = I>,
     {
-        self.base = self.base.consume_iter(iter.into_iter().map(self.operation));
+        self.base = self.base.consume_iter(iter.into_iter().map(self.operation.clone()));
 
         self
     }
