@@ -3,9 +3,12 @@ use super::{
     ProducerCallback, Reducer,
 };
 
-use crate::inner::{
-    collect::Collect, for_each::ForEach, map::Map, map_init::MapInit, map_with::MapWith,
-    reduce::Reduce,
+use crate::{
+    inner::{
+        collect::Collect, for_each::ForEach, map::Map, map_init::MapInit, map_with::MapWith,
+        reduce::Reduce, try_reduce::TryReduce,
+    },
+    misc::Try,
 };
 
 /// Parallel version of the standard iterator trait.
@@ -301,6 +304,46 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(Self::Item, Self::Item) -> Self::Item + Clone + Send + 'a,
     {
         Reduce::new(self, identity, operation)
+    }
+
+    /// Reduces the items in the iterator into one item using a fallible `operation`.
+    /// The `identity` argument is used the same way as in [`reduce()`].
+    ///
+    /// [`reduce()`]: #method.reduce
+    ///
+    /// If a `Result::Err` or `Option::None` item is found, or if `operation` reduces
+    /// to one, we will attempt to stop processing the rest of the items in the
+    /// iterator as soon as possible, and we will return that terminating value.
+    /// Otherwise, we will return the final reduced `Result::Ok(T)` or
+    /// `Option::Some(T)`.  If there are multiple errors in parallel, it is not
+    /// specified which will be returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// // Compute the sum of squares, being careful about overflow.
+    /// fn sum_squares<I: IntoParallelIterator<Item = i32>>(iter: I) -> Option<i32> {
+    ///     iter.into_par_iter()
+    ///         .map(|i| i.checked_mul(i))            // square each item,
+    ///         .try_reduce(|| 0, i32::checked_add)   // and add them up!
+    /// }
+    /// assert_eq!(sum_squares(0..5), Some(0 + 1 + 4 + 9 + 16));
+    ///
+    /// // The sum might overflow
+    /// assert_eq!(sum_squares(0..10_000), None);
+    ///
+    /// // Or the squares might overflow before it even reaches `try_reduce`
+    /// assert_eq!(sum_squares(1_000_000..1_000_001), None);
+    /// ```
+    fn try_reduce<S, O, T>(self, identity: S, operation: O) -> TryReduce<Self, S, O>
+    where
+        S: Fn() -> T + Sync + Send,
+        O: Fn(T, T) -> Self::Item + Sync + Send,
+        Self::Item: Try<Ok = T>,
+    {
+        TryReduce::new(self, identity, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced

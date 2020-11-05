@@ -5,6 +5,7 @@ pub mod map_init;
 pub mod map_with;
 pub mod noop;
 pub mod reduce;
+pub mod try_reduce;
 
 #[cfg(test)]
 mod tests {
@@ -40,12 +41,13 @@ mod tests {
     async fn test_reduce() {
         let x = (0..10usize)
             .into_par_iter()
-            .reduce(|| 0, |a, b| a + b)
+            .map::<_, Result<usize, ()>>(Ok)
+            .try_reduce(|| 0, |a, b| Ok(a + b))
             .exec()
             .await;
 
-        dbg!(x);
+        dbg!(&x);
 
-        assert_eq!(45, x);
+        assert_eq!(Ok(45), x);
     }
 }
