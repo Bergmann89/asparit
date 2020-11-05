@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{core::{FromParallelIterator, Driver}, ParallelIterator, Executor};
+use crate::{
+    core::{Driver, FromParallelIterator},
+    Executor, ParallelIterator,
+};
 
 pub struct Collect<X, T> {
     iterator: X,
@@ -22,7 +25,8 @@ where
     T: FromParallelIterator<X::Item> + Send,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
-    where E: Executor<'a, T>
+    where
+        E: Executor<'a, T>,
     {
         T::from_par_iter(executor, self.iterator)
     }

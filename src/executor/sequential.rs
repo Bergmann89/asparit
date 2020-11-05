@@ -1,13 +1,13 @@
 use crate::core::{
-    Consumer, Executor, Folder, IndexedConsumer,  IndexedProducer,
-     Producer,  Reducer,
+    Consumer, Executor, Folder, IndexedConsumer, IndexedProducer, Producer, Reducer,
 };
 
 #[derive(Default)]
 pub struct Sequential;
 
 impl<'a, D> Executor<'a, D> for Sequential
-where D: Send,
+where
+    D: Send,
 {
     type Result = D;
 

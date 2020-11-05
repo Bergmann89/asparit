@@ -1,9 +1,9 @@
 use crate::{
-    Consumer, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer, Reducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Executor,
+    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
+    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
-use super::map_with::{MapWithIter, MapWithFolder};
+use super::map_with::{MapWithFolder, MapWithIter};
 
 /* MapInit */
 
@@ -15,7 +15,11 @@ pub struct MapInit<X, S, O> {
 
 impl<X, S, O> MapInit<X, S, O> {
     pub fn new(base: X, init: S, operation: O) -> Self {
-        Self { base, init, operation }
+        Self {
+            base,
+            init,
+            operation,
+        }
     }
 }
 
@@ -68,7 +72,7 @@ where
         E: Executor<'a, D>,
         C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
         D: Send,
-        R: Reducer<D>
+        R: Reducer<D>,
     {
         let consumer = MapInitConsumer::new(consumer, self.init, self.operation);
 
@@ -279,7 +283,11 @@ struct MapInitConsumer<C, S, O> {
 
 impl<C, S, O> MapInitConsumer<C, S, O> {
     fn new(base: C, init: S, operation: O) -> Self {
-        Self { base, init, operation }
+        Self {
+            base,
+            init,
+            operation,
+        }
     }
 }
 
@@ -297,7 +305,10 @@ where
     fn split_off_left(&self) -> (Self, Self::Reducer) {
         let (left, reducer) = self.base.split_off_left();
 
-        (MapInitConsumer::new(left, self.init.clone(), self.operation.clone()), reducer)
+        (
+            MapInitConsumer::new(left, self.init.clone(), self.operation.clone()),
+            reducer,
+        )
     }
 
     fn into_folder(self) -> Self::Folder {

@@ -1,6 +1,9 @@
 use std::ops::Range;
 
-use crate::{Consumer, Folder, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback, Executor, Reducer, ExecutorCallback};
+use crate::{
+    Consumer, Executor, ExecutorCallback, Folder, IntoParallelIterator, ParallelIterator, Producer,
+    ProducerCallback, Reducer,
+};
 
 pub struct Iter {
     range: Range<usize>,

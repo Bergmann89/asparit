@@ -1,6 +1,11 @@
-use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer, FromParallelIterator};
+use super::{
+    Consumer, Executor, FromParallelIterator, IndexedConsumer, IndexedProducerCallback,
+    ProducerCallback, Reducer,
+};
 
-use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith, map_init::MapInit, collect::Collect};
+use crate::inner::{
+    collect::Collect, for_each::ForEach, map::Map, map_init::MapInit, map_with::MapWith,
+};
 
 /// Parallel version of the standard iterator trait.
 ///
@@ -125,6 +130,40 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Clone + Send + 'a,
     {
         self.map_with(init, operation).collect()
+    }
+
+    /// Executes `operation` on a value returned by `init` with each item produced by
+    /// the iterator, in parallel.
+    ///
+    /// The `init` function will be called only as needed for a value to be
+    /// paired with the group of items in each rayon job.  There is no
+    /// constraint on that returned type at all!
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rand::Rng;
+    /// use rayon::prelude::*;
+    ///
+    /// let mut v = vec![0u8; 1_000_000];
+    ///
+    /// v.par_chunks_mut(1000)
+    ///     .for_each_init(
+    ///         || rand::thread_rng(),
+    ///         |rng, chunk| rng.fill(chunk),
+    ///     );
+    ///
+    /// // There's a remote chance that this will fail...
+    /// for i in 0u8..=255 {
+    ///     assert!(v.contains(&i));
+    /// }
+    /// ```
+    fn for_each_init<O, S, T>(self, init: S, operation: O) -> Collect<MapInit<Self, S, O>, ()>
+    where
+        O: Fn(&mut T, Self::Item) + Clone + Sync + Send + 'a,
+        S: Fn() -> T + Clone + Sync + Send + 'a,
+    {
+        self.map_init(init, operation).collect()
     }
 
     /// Applies `operation` to each item of this iterator, producing a new

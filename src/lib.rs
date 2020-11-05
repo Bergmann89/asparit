@@ -4,8 +4,8 @@ mod inner;
 mod std;
 
 pub use self::core::{
-    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
-    IndexedProducerCallback, IntoParallelIterator, IntoParallelRefIterator, ExecutorCallback,
+    Consumer, Executor, ExecutorCallback, Folder, IndexedConsumer, IndexedParallelIterator,
+    IndexedProducer, IndexedProducerCallback, IntoParallelIterator, IntoParallelRefIterator,
     IntoParallelRefMutIterator, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 pub use self::executor::{DefaultExecutor, SequentialExecutor};

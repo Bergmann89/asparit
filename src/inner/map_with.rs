@@ -1,6 +1,6 @@
 use crate::{
-    Consumer, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer, Reducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Executor,
+    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
+    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
 /* MapWith */
@@ -13,7 +13,11 @@ pub struct MapWith<X, S, O> {
 
 impl<X, S, O> MapWith<X, S, O> {
     pub fn new(base: X, item: S, operation: O) -> Self {
-        Self { base, item, operation }
+        Self {
+            base,
+            item,
+            operation,
+        }
     }
 }
 
@@ -66,7 +70,7 @@ where
         E: Executor<'a, D>,
         C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
         D: Send,
-        R: Reducer<D>
+        R: Reducer<D>,
     {
         let consumer = MapWithConsumer::new(consumer, self.item, self.operation);
 
@@ -309,7 +313,8 @@ impl<I, S, O, T> ExactSizeIterator for MapWithIter<I, S, O>
 where
     I: ExactSizeIterator,
     O: Fn(&mut S, I::Item) -> T,
-{ }
+{
+}
 
 /* MapWithConsumer */
 
@@ -321,7 +326,11 @@ struct MapWithConsumer<C, S, O> {
 
 impl<C, S, O> MapWithConsumer<C, S, O> {
     fn new(base: C, item: S, operation: O) -> Self {
-        Self { base, item, operation }
+        Self {
+            base,
+            item,
+            operation,
+        }
     }
 }
 
@@ -339,7 +348,10 @@ where
     fn split_off_left(&self) -> (Self, Self::Reducer) {
         let (left, reducer) = self.base.split_off_left();
 
-        (MapWithConsumer::new(left, self.item.clone(), self.operation.clone()), reducer)
+        (
+            MapWithConsumer::new(left, self.item.clone(), self.operation.clone()),
+            reducer,
+        )
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -400,12 +412,16 @@ where
     where
         X: IntoIterator<Item = I>,
     {
-        fn with<'f, I, S, T>(item: &'f mut S, operation: impl Fn(&mut S, I) -> T + 'f,
+        fn with<'f, I, S, T>(
+            item: &'f mut S,
+            operation: impl Fn(&mut S, I) -> T + 'f,
         ) -> impl FnMut(I) -> T + 'f {
             move |x| operation(item, x)
         }
 
-        let mapped_iter = iter.into_iter().map(with(&mut self.item, self.operation.clone()));
+        let mapped_iter = iter
+            .into_iter()
+            .map(with(&mut self.item, self.operation.clone()));
 
         self.base = self.base.consume_iter(mapped_iter);
 

@@ -1,11 +1,14 @@
-use std::mem::transmute;
 use std::cmp;
+use std::mem::transmute;
 
-use futures::{future::{Future, BoxFuture, FutureExt}, join};
-use tokio::task::{spawn};
+use futures::{
+    future::{BoxFuture, Future, FutureExt},
+    join,
+};
+use tokio::task::spawn;
 
 use crate::core::{
-    Consumer, Executor, Folder, IndexedConsumer,  IndexedProducer, Producer,  Reducer,
+    Consumer, Executor, Folder, IndexedConsumer, IndexedProducer, Producer, Reducer,
 };
 
 pub struct Tokio {
@@ -21,13 +24,14 @@ impl Tokio {
 impl Default for Tokio {
     fn default() -> Self {
         Self {
-            splits: 2 * num_cpus::get()
+            splits: 2 * num_cpus::get(),
         }
     }
 }
 
 impl<'a, D> Executor<'a, D> for Tokio
-where D: Send,
+where
+    D: Send,
 {
     type Result = BoxFuture<'a, D>;
 
@@ -50,12 +54,16 @@ where D: Send,
         R: Reducer<D> + Send,
     {
         let splits = producer.splits().unwrap_or(self.splits);
-        let splitter = IndexedSplitter::new(splits, producer.len(), producer.min_len(), producer.max_len());
+        let splitter = IndexedSplitter::new(
+            splits,
+            producer.len(),
+            producer.min_len(),
+            producer.max_len(),
+        );
 
         exec_indexed(splitter, producer, consumer)
     }
 }
-
 
 fn exec<'a, P, C>(mut splitter: Splitter, producer: P, consumer: C) -> BoxFuture<'a, C::Result>
 where
@@ -88,7 +96,11 @@ where
     .boxed()
 }
 
-fn exec_indexed<'a, P, C>(mut splitter: IndexedSplitter, producer: P, consumer: C) -> BoxFuture<'a, C::Result>
+fn exec_indexed<'a, P, C>(
+    mut splitter: IndexedSplitter,
+    producer: P,
+    consumer: C,
+) -> BoxFuture<'a, C::Result>
 where
     P: IndexedProducer + 'a,
     C: IndexedConsumer<P::Item> + 'a,
@@ -152,9 +164,7 @@ struct Splitter {
 impl Splitter {
     #[inline]
     fn new(splits: usize) -> Self {
-        Self {
-            splits,
-        }
+        Self { splits }
     }
 
     #[inline]

@@ -1,6 +1,6 @@
 use crate::{
-    Consumer, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer, Reducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Executor,
+    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
+    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
 /* Map */
@@ -62,7 +62,7 @@ where
         E: Executor<'a, D>,
         C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
         D: Send,
-        R: Reducer<D>
+        R: Reducer<D>,
     {
         let consumer = MapConsumer::new(consumer, self.operation);
 
@@ -323,7 +323,9 @@ where
     where
         X: IntoIterator<Item = I>,
     {
-        self.base = self.base.consume_iter(iter.into_iter().map(self.operation.clone()));
+        self.base = self
+            .base
+            .consume_iter(iter.into_iter().map(self.operation.clone()));
 
         self
     }

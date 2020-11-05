@@ -115,7 +115,8 @@ pub trait IntoParallelRefMutIterator<'a> {
 }
 
 impl<'a, T> IntoParallelIterator<'a> for T
-where T: ParallelIterator<'a>
+where
+    T: ParallelIterator<'a>,
 {
     type Iter = T;
     type Item = T::Item;

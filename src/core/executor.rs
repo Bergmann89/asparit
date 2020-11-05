@@ -1,9 +1,11 @@
 use super::{
-    Consumer, IndexedConsumer, Producer, IndexedProducer, Reducer, ProducerCallback, IndexedProducerCallback,
+    Consumer, IndexedConsumer, IndexedProducer, IndexedProducerCallback, Producer,
+    ProducerCallback, Reducer,
 };
 
 pub trait Executor<'a, D>
-where D: Send,
+where
+    D: Send,
 {
     type Result: Send;
 
@@ -27,10 +29,7 @@ pub struct ExecutorCallback<E, C> {
 
 impl<E, C> ExecutorCallback<E, C> {
     pub fn new(executor: E, consumer: C) -> Self {
-        Self {
-            executor,
-            consumer,
-        }
+        Self { executor, consumer }
     }
 }
 
@@ -45,7 +44,7 @@ where
 
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: Producer<Item = I> + 'a
+        P: Producer<Item = I> + 'a,
     {
         self.executor.exec(producer, self.consumer)
     }
@@ -62,7 +61,7 @@ where
 
     fn callback<P>(self, producer: P) -> Self::Output
     where
-        P: IndexedProducer<Item = I> + 'a
+        P: IndexedProducer<Item = I> + 'a,
     {
         self.executor.exec_indexed(producer, self.consumer)
     }

@@ -1,4 +1,4 @@
-use super::{IntoParallelIterator, Executor};
+use super::{Executor, IntoParallelIterator};
 
 /// `FromParallelIterator` implements the creation of a collection
 /// from a [`ParallelIterator`]. By implementing
@@ -67,7 +67,7 @@ impl FromParallelIterator<()> for () {
         E: Executor<'a, Self>,
         X: IntoParallelIterator<'a, Item = ()>,
     {
-        use crate::{ParallelIterator, inner::noop::NoOpConsumer};
+        use crate::{inner::noop::NoOpConsumer, ParallelIterator};
 
         iterator.into_par_iter().drive(executor, NoOpConsumer)
     }

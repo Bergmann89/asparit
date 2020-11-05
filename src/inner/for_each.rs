@@ -1,4 +1,4 @@
-use crate::{core::Driver, Consumer, Folder, ParallelIterator, Executor};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator};
 
 use super::noop::NoOpReducer;
 
@@ -7,8 +7,7 @@ pub struct ForEach<X, O> {
     operation: O,
 }
 
-impl<X, O> ForEach<X, O>
-{
+impl<X, O> ForEach<X, O> {
     pub fn new(iterator: X, operation: O) -> Self {
         Self {
             iterator,
@@ -23,7 +22,8 @@ where
     O: Fn(X::Item) + Clone + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
-    where E: Executor<'a, ()>
+    where
+        E: Executor<'a, ()>,
     {
         let iterator = self.iterator;
         let operation = self.operation;
@@ -91,18 +91,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_each() {
-        use ::std::sync::Arc;
         use ::std::sync::atomic::{AtomicUsize, Ordering};
+        use ::std::sync::Arc;
 
         let i = Arc::new(AtomicUsize::new(0));
+        let j = Arc::new(AtomicUsize::new(0));
 
         let x = (0..10usize)
             .into_par_iter()
-            .map_init(move || { i.fetch_add(1, Ordering::Relaxed) }, |init, item| Some((*init, item)))
-            .for_each_with(5usize, |x, j| {
-                println!("{:?} {:?}", x, j);
-            })
-            .exec().await;
+            .map_init(
+                move || i.fetch_add(1, Ordering::Relaxed),
+                |init, item| Some((*init, item)),
+            )
+            .for_each_init(
+                move || j.fetch_add(1, Ordering::Relaxed),
+                |init, item| {
+                    println!("{:?} {:?}", init, item);
+                },
+            )
+            .exec()
+            .await;
 
         dbg!(x);
     }
