@@ -68,9 +68,9 @@ where
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
-        C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
+        C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
-        R: Reducer<D>,
+        R: Reducer<D> + Send,
     {
         let consumer = MapWithConsumer::new(consumer, self.item, self.operation);
 

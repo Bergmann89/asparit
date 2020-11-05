@@ -509,9 +509,9 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
-        C: IndexedConsumer<Self::Item, Result = D, Reducer = R>,
+        C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
-        R: Reducer<D>;
+        R: Reducer<D> + Send;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
