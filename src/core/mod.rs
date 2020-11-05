@@ -1,4 +1,5 @@
 mod consumer;
+mod drain;
 mod driver;
 mod executor;
 mod folder;
@@ -9,6 +10,7 @@ mod producer;
 mod reducer;
 
 pub use consumer::Consumer;
+pub use drain::{ParallelDrainFull, ParallelDrainRange};
 pub use driver::Driver;
 pub use executor::{Executor, ExecutorCallback};
 pub use folder::Folder;

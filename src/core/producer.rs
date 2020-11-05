@@ -19,13 +19,13 @@ pub trait Producer: Send + Sized {
     /// are possible.
     fn into_iter(self) -> Self::IntoIter;
 
+    /// Split midway into a new producer if possible, otherwise return `None`.
+    fn split(self) -> (Self, Option<Self>);
+
     /// Number of splits/threads this iterator will use to proceed.
     fn splits(&self) -> Option<usize> {
         None
     }
-
-    /// Split midway into a new producer if possible, otherwise return `None`.
-    fn split(self) -> (Self, Option<Self>);
 
     /// Iterate the producer, feeding each element to `folder`, and
     /// stop when the folder is full (or all elements have been consumed).
@@ -76,14 +76,18 @@ pub trait IndexedProducer: Send + Sized {
     /// are possible.
     fn into_iter(self) -> Self::IntoIter;
 
+    /// Produces an exact count of how many items this producer will
+    /// emit, presuming no panic occurs.
+    fn len(&self) -> usize;
+
+    /// Split into two producers; one produces items `0..index`, the
+    /// other `index..N`. Index must be less than or equal to `N`.
+    fn split_at(self, index: usize) -> (Self, Self);
+
     /// Number of splits/threads this iterator will use to proceed.
     fn splits(&self) -> Option<usize> {
         None
     }
-
-    /// Produces an exact count of how many items this producer will
-    /// emit, presuming no panic occurs.
-    fn len(&self) -> usize;
 
     /// The minimum number of items that we will process
     /// sequentially. Defaults to 1, which means that we will split
@@ -111,10 +115,6 @@ pub trait IndexedProducer: Send + Sized {
     fn max_len(&self) -> Option<usize> {
         None
     }
-
-    /// Split into two producers; one produces items `0..index`, the
-    /// other `index..N`. Index must be less than or equal to `N`.
-    fn split_at(self, index: usize) -> (Self, Self);
 
     /// Iterate the producer, feeding each element to `folder`, and
     /// stop when the folder is full (or all elements have been consumed).

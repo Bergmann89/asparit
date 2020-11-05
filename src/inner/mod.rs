@@ -20,7 +20,16 @@ mod tests {
         let i = Arc::new(AtomicUsize::new(0));
         let j = Arc::new(AtomicUsize::new(0));
 
-        let x = (0..10usize)
+        let x = vec![
+            vec![0usize],
+            vec![1usize],
+            vec![2usize],
+            vec![3usize],
+            vec![4usize],
+            vec![5usize],
+        ];
+
+        let x = x
             .into_par_iter()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
