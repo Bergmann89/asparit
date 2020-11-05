@@ -5,6 +5,7 @@ pub mod map_init;
 pub mod map_with;
 pub mod noop;
 pub mod reduce;
+pub mod try_for_each;
 pub mod try_reduce;
 
 #[cfg(test)]
@@ -25,16 +26,18 @@ mod tests {
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| Some((*init, item)),
             )
-            .for_each_init(
+            .try_for_each_init(
                 move || j.fetch_add(1, Ordering::Relaxed),
-                |init, item| {
+                |init, item| -> Result<(), ()> {
                     println!("{:?} {:?}", init, item);
+
+                    Ok(())
                 },
             )
             .exec()
             .await;
 
-        dbg!(x);
+        dbg!(&x);
     }
 
     #[tokio::test]
