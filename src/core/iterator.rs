@@ -5,6 +5,7 @@ use super::{
 
 use crate::inner::{
     collect::Collect, for_each::ForEach, map::Map, map_init::MapInit, map_with::MapWith,
+    reduce::Reduce,
 };
 
 /// Parallel version of the standard iterator trait.
@@ -262,6 +263,44 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         MapInit::new(self, init, operation)
+    }
+
+    /// Reduces the items in the iterator into one item using `operation`.
+    /// The argument `identity` should be a closure that can produce
+    /// "identity" value which may be inserted into the sequence as
+    /// needed to create opportunities for parallel execution. So, for
+    /// example, if you are doing a summation, then `identity()` ought
+    /// to produce something that represents the zero for your type
+    /// (but consider just calling `sum()` in that case).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Iterate over a sequence of pairs `(x0, y0), ..., (xN, yN)`
+    /// // and use reduce to compute one pair `(x0 + ... + xN, y0 + ... + yN)`
+    /// // where the first/second elements are summed separately.
+    /// use rayon::prelude::*;
+    /// let sums = [(0, 1), (5, 6), (16, 2), (8, 9)]
+    ///            .par_iter()        // iterating over &(i32, i32)
+    ///            .cloned()          // iterating over (i32, i32)
+    ///            .reduce(|| (0, 0), // the "identity" is 0 in both columns
+    ///                    |a, b| (a.0 + b.0, a.1 + b.1));
+    /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
+    /// ```
+    ///
+    /// **Note:** unlike a sequential `fold` operation, the order in
+    /// which `operation` will be applied to reduce the result is not fully
+    /// specified. So `operation` should be [associative] or else the results
+    /// will be non-deterministic. And of course `identity()` should
+    /// produce a true identity.
+    ///
+    /// [associative]: https://en.wikipedia.org/wiki/Associative_property
+    fn reduce<S, O>(self, identity: S, operation: O) -> Reduce<Self, S, O>
+    where
+        S: Fn() -> Self::Item + Clone + Send + 'a,
+        O: Fn(Self::Item, Self::Item) -> Self::Item + Clone + Send + 'a,
+    {
+        Reduce::new(self, identity, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced

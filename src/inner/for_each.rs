@@ -83,35 +83,3 @@ where
 
     fn complete(self) {}
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::*;
-
-    #[tokio::test]
-    async fn test_for_each() {
-        use ::std::sync::atomic::{AtomicUsize, Ordering};
-        use ::std::sync::Arc;
-
-        let i = Arc::new(AtomicUsize::new(0));
-        let j = Arc::new(AtomicUsize::new(0));
-
-        let x = (0..10usize)
-            .into_par_iter()
-            .map_init(
-                move || i.fetch_add(1, Ordering::Relaxed),
-                |init, item| Some((*init, item)),
-            )
-            .for_each_init(
-                move || j.fetch_add(1, Ordering::Relaxed),
-                |init, item| {
-                    println!("{:?} {:?}", init, item);
-                },
-            )
-            .exec()
-            .await;
-
-        dbg!(x);
-    }
-}

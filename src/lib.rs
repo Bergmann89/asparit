@@ -4,7 +4,7 @@ mod inner;
 mod std;
 
 pub use self::core::{
-    Consumer, Executor, ExecutorCallback, Folder, IndexedConsumer, IndexedParallelIterator,
+    Consumer, Driver, Executor, ExecutorCallback, Folder, IndexedConsumer, IndexedParallelIterator,
     IndexedProducer, IndexedProducerCallback, IntoParallelIterator, IntoParallelRefIterator,
     IntoParallelRefMutIterator, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
