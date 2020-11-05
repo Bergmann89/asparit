@@ -1,6 +1,6 @@
-use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer};
+use super::{Consumer, IndexedConsumer, IndexedProducerCallback, ProducerCallback, Executor, Reducer, FromParallelIterator};
 
-use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith, map_init::MapInit};
+use crate::inner::{for_each::ForEach, map::Map, map_with::MapWith, map_init::MapInit, collect::Collect};
 
 /// Parallel version of the standard iterator trait.
 ///
@@ -80,7 +80,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
         None
     }
 
-    /// Executes `OP` on each item produced by the iterator, in parallel.
+    /// Executes `operation` on each item produced by the iterator, in parallel.
     ///
     /// # Examples
     ///
@@ -94,6 +94,37 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(Self::Item),
     {
         ForEach::new(self, operation)
+    }
+
+    /// Executes `operation` on the given `init` value with each item produced by
+    /// the iterator, in parallel.
+    ///
+    /// The `init` value will be cloned only as needed to be paired with
+    /// the group of items in each rayon job.  It does not require the type
+    /// to be `Sync`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::mpsc::channel;
+    /// use rayon::prelude::*;
+    ///
+    /// let (sender, receiver) = channel();
+    ///
+    /// (0..5).into_par_iter().for_each_with(sender, |s, x| s.send(x).unwrap());
+    ///
+    /// let mut res: Vec<_> = receiver.iter().collect();
+    ///
+    /// res.sort();
+    ///
+    /// assert_eq!(&res[..], &[0, 1, 2, 3, 4])
+    /// ```
+    fn for_each_with<O, T>(self, init: T, operation: O) -> Collect<MapWith<Self, T, O>, ()>
+    where
+        O: Fn(&mut T, Self::Item) + Clone + Send + Sync + 'a,
+        T: Clone + Send + 'a,
+    {
+        self.map_with(init, operation).collect()
     }
 
     /// Applies `operation` to each item of this iterator, producing a new
@@ -150,7 +181,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn map_with<O, T, S>(self, init: S, operation: O) -> MapWith<Self, S, O>
     where
-        O: Fn(&mut S, Self::Item) -> T + Sync + Send,
+        O: Fn(&mut S, Self::Item) -> T + Clone + Sync + Send,
         S: Send + Clone,
         T: Send,
     {
@@ -192,6 +223,37 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         MapInit::new(self, init, operation)
+    }
+
+    /// Creates a fresh collection containing all the elements produced
+    /// by this parallel iterator.
+    ///
+    /// You may prefer [`collect_into_vec()`] implemented on
+    /// [`IndexedParallelIterator`], if your underlying iterator also implements
+    /// it. [`collect_into_vec()`] allocates efficiently with precise knowledge
+    /// of how many elements the iterator contains, and even allows you to reuse
+    /// an existing vector's backing store rather than allocating a fresh vector.
+    ///
+    /// [`IndexedParallelIterator`]: trait.IndexedParallelIterator.html
+    /// [`collect_into_vec()`]:
+    ///     trait.IndexedParallelIterator.html#method.collect_into_vec
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let sync_vec: Vec<_> = (0..100).into_iter().collect();
+    ///
+    /// let async_vec: Vec<_> = (0..100).into_par_iter().collect();
+    ///
+    /// assert_eq!(sync_vec, async_vec);
+    /// ```
+    fn collect<T>(self) -> Collect<Self, T>
+    where
+        T: FromParallelIterator<Self::Item>,
+    {
+        Collect::new(self)
     }
 }
 

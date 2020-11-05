@@ -99,8 +99,8 @@ mod tests {
         let x = (0..10usize)
             .into_par_iter()
             .map_init(move || { i.fetch_add(1, Ordering::Relaxed) }, |init, item| Some((*init, item)))
-            .for_each(|j| {
-                println!("{:?}", j);
+            .for_each_with(5usize, |x, j| {
+                println!("{:?} {:?}", x, j);
             })
             .exec().await;
 

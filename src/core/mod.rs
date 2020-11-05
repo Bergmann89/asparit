@@ -6,7 +6,9 @@ mod into_iter;
 mod iterator;
 mod producer;
 mod reducer;
+mod from_iter;
 
+pub use from_iter::FromParallelIterator;
 pub use consumer::{Consumer, IndexedConsumer};
 pub use driver::Driver;
 pub use executor::{Executor, ExecutorCallback};
