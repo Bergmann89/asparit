@@ -1,6 +1,5 @@
 use super::{
-    Consumer, Executor, FromParallelIterator, IndexedConsumer, IndexedProducerCallback,
-    ProducerCallback, Reducer,
+    Consumer, Executor, FromParallelIterator, IndexedProducerCallback, ProducerCallback, Reducer,
 };
 
 use crate::{
@@ -509,7 +508,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
-        C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
         R: Reducer<D> + Send;
 

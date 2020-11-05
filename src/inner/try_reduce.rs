@@ -3,9 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use crate::{
-    core::Driver, misc::Try, Consumer, Executor, Folder, IndexedConsumer, ParallelIterator, Reducer,
-};
+use crate::{core::Driver, misc::Try, Consumer, Executor, Folder, ParallelIterator, Reducer};
 
 pub struct TryReduce<X, S, O> {
     iterator: X,
@@ -80,8 +78,12 @@ where
     type Reducer = Self;
     type Result = T;
 
-    fn split_off_left(&self) -> (Self, Self::Reducer) {
-        (self.clone(), self.clone())
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        (self.clone(), self.clone(), self)
+    }
+
+    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
+        (self.clone(), self.clone(), self)
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -90,17 +92,6 @@ where
             item: Ok((self.identity)()),
             is_full: self.is_full,
         }
-    }
-}
-
-impl<S, O, T> IndexedConsumer<T> for TryReduceConsumer<S, O>
-where
-    S: Fn() -> T::Ok + Clone + Send,
-    O: Fn(T::Ok, T::Ok) -> T + Clone + Send,
-    T: Try + Send,
-{
-    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
-        (self.clone(), self.clone(), self)
     }
 }
 

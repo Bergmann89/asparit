@@ -1,4 +1,4 @@
-use crate::{core::Driver, Consumer, Executor, Folder, IndexedConsumer, ParallelIterator, Reducer};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer};
 
 pub struct Reduce<X, S, O> {
     iterator: X,
@@ -69,8 +69,12 @@ where
     type Reducer = Self;
     type Result = T;
 
-    fn split_off_left(&self) -> (Self, Self::Reducer) {
-        (self.clone(), self.clone())
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        (self.clone(), self.clone(), self)
+    }
+
+    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
+        (self.clone(), self.clone(), self)
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -78,17 +82,6 @@ where
             operation: self.operation,
             item: (self.identity)(),
         }
-    }
-}
-
-impl<S, O, T> IndexedConsumer<T> for ReduceConsumer<S, O>
-where
-    S: Fn() -> T + Clone + Send,
-    O: Fn(T, T) -> T + Clone + Send,
-    T: Send,
-{
-    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
-        (self.clone(), self.clone(), self)
     }
 }
 

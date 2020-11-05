@@ -24,14 +24,20 @@ pub trait Consumer<I>: Send + Sized {
     /// The type of result that this consumer will ultimately produce.
     type Result: Send;
 
-    /// Splits off a "left" consumer and returns it. The `self`
-    /// consumer should then be used to consume the "right" portion of
-    /// the data. (The ordering matters for methods like find_first --
-    /// values produced by the returned value are given precedence
-    /// over values produced by `self`.) Once the left and right
-    /// halves have been fully consumed, you should reduce the results
-    /// with the result of `to_reducer`.
-    fn split_off_left(&self) -> (Self, Self::Reducer);
+    /// Divide the consumer into two consumers, one processing the left items
+    /// and one processing the right items from. Also produces a reducer that
+    /// can be used to reduce the results at the end.
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        panic!("Consumer could not be used in unindexed mode!");
+    }
+
+    /// Divide the consumer into two consumers, one processing items
+    /// `0..index` and one processing items from `index..`. Also
+    /// produces a reducer that can be used to reduce the results at
+    /// the end.
+    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
+        panic!("Consumer could not be used in indexed mode!");
+    }
 
     /// Convert the consumer into a folder that can consume items
     /// sequentially, eventually producing a final result.
@@ -42,15 +48,4 @@ pub trait Consumer<I>: Send + Sized {
     fn is_full(&self) -> bool {
         false
     }
-}
-
-/// A stateless consumer can be freely copied. These consumers can be
-/// used like regular consumers, but they also support a
-/// `split_at` method that does take an index to split.
-pub trait IndexedConsumer<I>: Consumer<I> {
-    /// Divide the consumer into two consumers, one processing items
-    /// `0..index` and one processing items from `index..`. Also
-    /// produces a reducer that can be used to reduce the results at
-    /// the end.
-    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer);
 }

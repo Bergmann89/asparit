@@ -1,6 +1,6 @@
 use crate::{
-    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
+    Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
+    ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
 use super::map_with::{MapWithFolder, MapWithIter};
@@ -70,7 +70,7 @@ where
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
-        C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
         R: Reducer<D> + Send,
     {
@@ -302,13 +302,22 @@ where
     type Reducer = C::Reducer;
     type Result = C::Result;
 
-    fn split_off_left(&self) -> (Self, Self::Reducer) {
-        let (left, reducer) = self.base.split_off_left();
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        let (left, right, reducer) = self.base.split();
 
-        (
-            MapInitConsumer::new(left, self.init.clone(), self.operation.clone()),
-            reducer,
-        )
+        let left = MapInitConsumer::new(left, self.init.clone(), self.operation.clone());
+        let right = MapInitConsumer::new(right, self.init, self.operation);
+
+        (left, right, reducer)
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
+        let (left, right, reducer) = self.base.split_at(index);
+
+        let left = MapInitConsumer::new(left, self.init.clone(), self.operation.clone());
+        let right = MapInitConsumer::new(right, self.init, self.operation);
+
+        (left, right, reducer)
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -321,23 +330,5 @@ where
 
     fn is_full(&self) -> bool {
         self.base.is_full()
-    }
-}
-
-impl<I, T, C, S, U, O> IndexedConsumer<I> for MapInitConsumer<C, S, O>
-where
-    C: IndexedConsumer<T>,
-    O: Fn(&mut U, I) -> T + Clone + Send + Sync,
-    T: Send,
-    S: Fn() -> U + Clone + Send,
-{
-    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
-        let (left, right, reducer) = self.base.split_at(index);
-
-        (
-            MapInitConsumer::new(left, self.init.clone(), self.operation.clone()),
-            MapInitConsumer::new(right, self.init, self.operation),
-            reducer,
-        )
     }
 }

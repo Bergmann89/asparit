@@ -1,4 +1,4 @@
-use crate::{Consumer, Folder, IndexedConsumer, Reducer};
+use crate::{Consumer, Folder, Reducer};
 
 pub struct NoOpConsumer;
 
@@ -7,8 +7,12 @@ impl<T> Consumer<T> for NoOpConsumer {
     type Reducer = NoOpReducer;
     type Result = ();
 
-    fn split_off_left(&self) -> (Self, Self::Reducer) {
-        (NoOpConsumer, NoOpReducer)
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        (NoOpConsumer, NoOpConsumer, NoOpReducer)
+    }
+
+    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
+        (NoOpConsumer, NoOpConsumer, NoOpReducer)
     }
 
     fn into_folder(self) -> Self {
@@ -36,12 +40,6 @@ impl<T> Folder<T> for NoOpConsumer {
     }
 
     fn complete(self) {}
-}
-
-impl<T> IndexedConsumer<T> for NoOpConsumer {
-    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
-        (NoOpConsumer, NoOpConsumer, NoOpReducer)
-    }
 }
 
 pub struct NoOpReducer;

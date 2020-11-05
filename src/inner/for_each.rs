@@ -46,13 +46,22 @@ where
     type Reducer = NoOpReducer;
     type Result = ();
 
-    fn split_off_left(&self) -> (Self, NoOpReducer) {
-        (
-            ForEachConsumer {
-                operation: self.operation.clone(),
-            },
-            NoOpReducer,
-        )
+    fn split(self) -> (Self, Self, NoOpReducer) {
+        let left = self;
+        let right = ForEachConsumer {
+            operation: left.operation.clone(),
+        };
+
+        (left, right, NoOpReducer)
+    }
+
+    fn split_at(self, _index: usize) -> (Self, Self, NoOpReducer) {
+        let left = self;
+        let right = ForEachConsumer {
+            operation: left.operation.clone(),
+        };
+
+        (left, right, NoOpReducer)
     }
 
     fn into_folder(self) -> Self {

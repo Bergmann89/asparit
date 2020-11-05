@@ -1,6 +1,4 @@
-use crate::core::{
-    Consumer, Executor, Folder, IndexedConsumer, IndexedProducer, Producer, Reducer,
-};
+use crate::core::{Consumer, Executor, Folder, IndexedProducer, Producer, Reducer};
 
 #[derive(Default)]
 pub struct Sequential;
@@ -27,7 +25,7 @@ where
     fn exec_indexed<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: IndexedProducer,
-        C: IndexedConsumer<P::Item, Result = D, Reducer = R>,
+        C: Consumer<P::Item, Result = D, Reducer = R>,
         R: Reducer<D>,
     {
         if consumer.is_full() {

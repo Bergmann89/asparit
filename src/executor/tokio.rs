@@ -7,9 +7,7 @@ use futures::{
 };
 use tokio::task::spawn;
 
-use crate::core::{
-    Consumer, Executor, Folder, IndexedConsumer, IndexedProducer, Producer, Reducer,
-};
+use crate::core::{Consumer, Executor, Folder, IndexedProducer, Producer, Reducer};
 
 pub struct Tokio {
     splits: usize,
@@ -50,7 +48,7 @@ where
     fn exec_indexed<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: IndexedProducer + 'a,
-        C: IndexedConsumer<P::Item, Result = D, Reducer = R> + 'a,
+        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
         R: Reducer<D> + Send,
     {
         let splits = producer.splits().unwrap_or(self.splits);
@@ -77,8 +75,7 @@ where
         } else if splitter.try_split() {
             match producer.split() {
                 (left_producer, Some(right_producer)) => {
-                    let ((left_consumer, reducer), right_consumer) =
-                        (consumer.split_off_left(), consumer);
+                    let (left_consumer, right_consumer, reducer) = consumer.split();
 
                     let left = run_as_task(exec(splitter, left_producer, left_consumer));
                     let right = run_as_task(exec(splitter, right_producer, right_consumer));
@@ -103,7 +100,7 @@ fn exec_indexed<'a, P, C>(
 ) -> BoxFuture<'a, C::Result>
 where
     P: IndexedProducer + 'a,
-    C: IndexedConsumer<P::Item> + 'a,
+    C: Consumer<P::Item> + 'a,
     C::Reducer: Send,
 {
     async move {

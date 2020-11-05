@@ -1,6 +1,6 @@
 use crate::{
-    Consumer, Executor, Folder, IndexedConsumer, IndexedParallelIterator, IndexedProducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
+    Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
+    ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
 /* Map */
@@ -60,7 +60,7 @@ where
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
-        C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
+        C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send,
         R: Reducer<D> + Send,
     {
@@ -262,10 +262,22 @@ where
     type Reducer = C::Reducer;
     type Result = C::Result;
 
-    fn split_off_left(&self) -> (Self, Self::Reducer) {
-        let (left, reducer) = self.base.split_off_left();
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        let (left, right, reducer) = self.base.split();
 
-        (MapConsumer::new(left, self.operation.clone()), reducer)
+        let left = MapConsumer::new(left, self.operation.clone());
+        let right = MapConsumer::new(right, self.operation);
+
+        (left, right, reducer)
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
+        let (left, right, reducer) = self.base.split_at(index);
+
+        let left = MapConsumer::new(left, self.operation.clone());
+        let right = MapConsumer::new(right, self.operation);
+
+        (left, right, reducer)
     }
 
     fn into_folder(self) -> Self::Folder {
@@ -277,23 +289,6 @@ where
 
     fn is_full(&self) -> bool {
         self.base.is_full()
-    }
-}
-
-impl<I, T, C, O> IndexedConsumer<I> for MapConsumer<C, O>
-where
-    C: IndexedConsumer<O::Output>,
-    O: Fn(I) -> T + Clone + Send + Sync,
-    T: Send,
-{
-    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
-        let (left, right, reducer) = self.base.split_at(index);
-
-        (
-            MapConsumer::new(left, self.operation.clone()),
-            MapConsumer::new(right, self.operation),
-            reducer,
-        )
     }
 }
 

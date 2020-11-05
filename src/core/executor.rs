@@ -1,6 +1,5 @@
 use super::{
-    Consumer, IndexedConsumer, IndexedProducer, IndexedProducerCallback, Producer,
-    ProducerCallback, Reducer,
+    Consumer, IndexedProducer, IndexedProducerCallback, Producer, ProducerCallback, Reducer,
 };
 
 pub trait Executor<'a, D>
@@ -18,7 +17,7 @@ where
     fn exec_indexed<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: IndexedProducer + 'a,
-        C: IndexedConsumer<P::Item, Result = D, Reducer = R> + 'a,
+        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
         R: Reducer<D> + Send;
 }
 
@@ -54,7 +53,7 @@ impl<'a, E, D, C, I, R> IndexedProducerCallback<'a, I> for ExecutorCallback<E, C
 where
     E: Executor<'a, D>,
     D: Send,
-    C: IndexedConsumer<I, Result = D, Reducer = R> + 'a,
+    C: Consumer<I, Result = D, Reducer = R> + 'a,
     R: Reducer<D> + Send,
 {
     type Output = E::Result;

@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use crate::{
-    Consumer, Executor, ExecutorCallback, IndexedConsumer, IndexedParallelIterator,
-    IndexedProducer, IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer,
-    ProducerCallback, Reducer,
+    Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
+    IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
+    Reducer,
 };
 
 /// Parallel iterator over a range, implemented for all integer types.
@@ -143,7 +143,7 @@ macro_rules! indexed_parallel_iterator_impl {
             fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
             where
                 E: Executor<'a, D>,
-                C: IndexedConsumer<Self::Item, Result = D, Reducer = R> + 'a,
+                C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
                 D: Send,
                 R: Reducer<D> + Send,
             {

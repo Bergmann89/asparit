@@ -8,7 +8,7 @@ mod iterator;
 mod producer;
 mod reducer;
 
-pub use consumer::{Consumer, IndexedConsumer};
+pub use consumer::Consumer;
 pub use driver::Driver;
 pub use executor::{Executor, ExecutorCallback};
 pub use folder::Folder;
