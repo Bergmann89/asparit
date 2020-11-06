@@ -30,7 +30,7 @@ mod tests {
         ];
 
         let x = x
-            .into_par_iter()
+            .par_iter()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| Some((*init, item)),
