@@ -45,10 +45,6 @@ where
             operation: self.operation,
         })
     }
-
-    fn len_hint_opt(&self) -> Option<usize> {
-        self.base.len_hint_opt()
-    }
 }
 
 /* FilterConsumer */

@@ -9,6 +9,7 @@ use crate::{
         copied::Copied,
         filter::Filter,
         filter_map::FilterMap,
+        fold::{Fold, FoldWith},
         for_each::ForEach,
         inspect::Inspect,
         map::Map,
@@ -617,6 +618,175 @@ pub trait ParallelIterator<'a>: Sized + Send {
         Self::Item: Try<Ok = T>,
     {
         TryReduce::new(self, identity, operation)
+    }
+
+    /// Parallel fold is similar to sequential fold except that the
+    /// sequence of items may be subdivided before it is
+    /// folded. Consider a list of numbers like `22 3 77 89 46`. If
+    /// you used sequential fold to add them (`fold(0, |a,b| a+b)`,
+    /// you would wind up first adding 0 + 22, then 22 + 3, then 25 +
+    /// 77, and so forth. The **parallel fold** works similarly except
+    /// that it first breaks up your list into sublists, and hence
+    /// instead of yielding up a single sum at the end, it yields up
+    /// multiple sums. The number of results is nondeterministic, as
+    /// is the point where the breaks occur.
+    ///
+    /// So if did the same parallel fold (`fold(0, |a,b| a+b)`) on
+    /// our example list, we might wind up with a sequence of two numbers,
+    /// like so:
+    ///
+    /// ```notrust
+    /// 22 3 77 89 46
+    ///       |     |
+    ///     102   135
+    /// ```
+    ///
+    /// Or perhaps these three numbers:
+    ///
+    /// ```notrust
+    /// 22 3 77 89 46
+    ///       |  |  |
+    ///     102 89 46
+    /// ```
+    ///
+    /// In general, Rayon will attempt to find good breaking points
+    /// that keep all of your cores busy.
+    ///
+    /// ### Fold versus reduce
+    ///
+    /// The `fold()` and `reduce()` methods each take an identity element
+    /// and a combining function, but they operate rather differently.
+    ///
+    /// `reduce()` requires that the identity function has the same
+    /// type as the things you are iterating over, and it fully
+    /// reduces the list of items into a single item. So, for example,
+    /// imagine we are iterating over a list of bytes `bytes: [128_u8,
+    /// 64_u8, 64_u8]`. If we used `bytes.reduce(|| 0_u8, |a: u8, b:
+    /// u8| a + b)`, we would get an overflow. This is because `0`,
+    /// `a`, and `b` here are all bytes, just like the numbers in the
+    /// list (I wrote the types explicitly above, but those are the
+    /// only types you can use). To avoid the overflow, we would need
+    /// to do something like `bytes.map(|b| b as u32).reduce(|| 0, |a,
+    /// b| a + b)`, in which case our result would be `256`.
+    ///
+    /// In contrast, with `fold()`, the identity function does not
+    /// have to have the same type as the things you are iterating
+    /// over, and you potentially get back many results. So, if we
+    /// continue with the `bytes` example from the previous paragraph,
+    /// we could do `bytes.fold(|| 0_u32, |a, b| a + (b as u32))` to
+    /// convert our bytes into `u32`. And of course we might not get
+    /// back a single sum.
+    ///
+    /// There is a more subtle distinction as well, though it's
+    /// actually implied by the above points. When you use `reduce()`,
+    /// your reduction function is sometimes called with values that
+    /// were never part of your original parallel iterator (for
+    /// example, both the left and right might be a partial sum). With
+    /// `fold()`, in contrast, the left value in the fold function is
+    /// always the accumulator, and the right value is always from
+    /// your original sequence.
+    ///
+    /// ### Fold vs Map/Reduce
+    ///
+    /// Fold makes sense if you have some operation where it is
+    /// cheaper to create groups of elements at a time. For example,
+    /// imagine collecting characters into a string. If you were going
+    /// to use map/reduce, you might try this:
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let s =
+    ///     ['a', 'b', 'c', 'd', 'e']
+    ///     .par_iter()
+    ///     .map(|c: &char| format!("{}", c))
+    ///     .reduce(|| String::new(),
+    ///             |mut a: String, b: String| { a.push_str(&b); a });
+    ///
+    /// assert_eq!(s, "abcde");
+    /// ```
+    ///
+    /// Because reduce produces the same type of element as its input,
+    /// you have to first map each character into a string, and then
+    /// you can reduce them. This means we create one string per
+    /// element in our iterator -- not so great. Using `fold`, we can
+    /// do this instead:
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let s =
+    ///     ['a', 'b', 'c', 'd', 'e']
+    ///     .par_iter()
+    ///     .fold(|| String::new(),
+    ///             |mut s: String, c: &char| { s.push(*c); s })
+    ///     .reduce(|| String::new(),
+    ///             |mut a: String, b: String| { a.push_str(&b); a });
+    ///
+    /// assert_eq!(s, "abcde");
+    /// ```
+    ///
+    /// Now `fold` will process groups of our characters at a time,
+    /// and we only make one string per group. We should wind up with
+    /// some small-ish number of strings roughly proportional to the
+    /// number of CPUs you have (it will ultimately depend on how busy
+    /// your processors are). Note that we still need to do a reduce
+    /// afterwards to combine those groups of strings into a single
+    /// string.
+    ///
+    /// You could use a similar trick to save partial results (e.g., a
+    /// cache) or something similar.
+    ///
+    /// ### Combining fold with other operations
+    ///
+    /// You can combine `fold` with `reduce` if you want to produce a
+    /// single value. This is then roughly equivalent to a map/reduce
+    /// combination in effect:
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let bytes = 0..22_u8;
+    /// let sum = bytes.into_par_iter()
+    ///                .fold(|| 0_u32, |a: u32, b: u8| a + (b as u32))
+    ///                .sum::<u32>();
+    ///
+    /// assert_eq!(sum, (0..22).sum()); // compare to sequential
+    /// ```
+    fn fold<S, O, U>(self, init: S, operation: O) -> Fold<Self, S, O>
+    where
+        S: Fn() -> U + Clone + Send + 'a,
+        O: Fn(U, Self::Item) -> U + Clone + Send + 'a,
+        U: Send,
+    {
+        Fold::new(self, init, operation)
+    }
+
+    /// Applies `operation` to the given `init` value with each item of this
+    /// iterator, finally producing the value for further use.
+    ///
+    /// This works essentially like `fold(|| init.clone(), operation)`, except
+    /// it doesn't require the `init` type to be `Sync`, nor any other form
+    /// of added synchronization.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let bytes = 0..22_u8;
+    /// let sum = bytes.into_par_iter()
+    ///                .fold_with(0_u32, |a: u32, b: u8| a + (b as u32))
+    ///                .sum::<u32>();
+    ///
+    /// assert_eq!(sum, (0..22).sum()); // compare to sequential
+    /// ```
+    fn fold_with<U, O>(self, init: U, operation: O) -> FoldWith<Self, U, O>
+    where
+        U: Clone + Send + 'a,
+        O: Fn(U, Self::Item) -> U + Clone + Send + 'a,
+    {
+        FoldWith::new(self, init, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced

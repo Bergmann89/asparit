@@ -3,6 +3,7 @@ pub mod collect;
 pub mod copied;
 pub mod filter;
 pub mod filter_map;
+pub mod fold;
 pub mod for_each;
 pub mod inspect;
 pub mod map;
@@ -27,23 +28,20 @@ mod tests {
         let j = Arc::new(AtomicUsize::new(0));
 
         let x = vec![
-            vec![0usize],
-            vec![1usize],
-            vec![2usize],
-            vec![3usize],
-            vec![4usize],
-            vec![5usize],
+            vec![1usize, 2usize],
+            vec![3usize, 4usize],
+            vec![5usize, 6usize],
         ];
 
         let x = x
             .par_iter()
             .cloned()
-            .update(|x| x.push(5))
+            .update(|x| x.push(0))
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| (item, *init),
             )
-            .filter_map(|(x, i)| if i % 2 == 0 { Some((i, x)) } else { None })
+            .fold_with(String::new(), |s, item| format!("{} + {:?}", s, item))
             .try_for_each_init(
                 move || j.fetch_add(1, Ordering::Relaxed),
                 |init, item| -> Result<(), ()> {
