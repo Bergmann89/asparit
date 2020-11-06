@@ -8,6 +8,7 @@ use crate::{
         collect::Collect,
         copied::Copied,
         filter::Filter,
+        filter_map::FilterMap,
         for_each::ForEach,
         inspect::Inspect,
         map::Map,
@@ -513,6 +514,31 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
     {
         Filter::new(self, operation)
+    }
+
+    /// Applies `operation` to each item of this iterator to get an `Option`,
+    /// producing a new iterator with only the items from `Some` results.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let mut par_iter = (0..10).into_par_iter()
+    ///                         .filter_map(|x| {
+    ///                             if x % 2 == 0 { Some(x * 3) }
+    ///                             else { None }
+    ///                         });
+    ///
+    /// let even_numbers: Vec<_> = par_iter.collect();
+    ///
+    /// assert_eq!(&even_numbers[..], &[0, 6, 12, 18, 24]);
+    /// ```
+    fn filter_map<O, S>(self, operation: O) -> FilterMap<Self, O>
+    where
+        O: Fn(Self::Item) -> Option<S> + Clone + Send + 'a,
+    {
+        FilterMap::new(self, operation)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.

@@ -2,6 +2,7 @@ pub mod cloned;
 pub mod collect;
 pub mod copied;
 pub mod filter;
+pub mod filter_map;
 pub mod for_each;
 pub mod inspect;
 pub mod map;
@@ -42,11 +43,11 @@ mod tests {
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| (item, *init),
             )
-            .filter(|(_, i)| i % 2 == 0)
+            .filter_map(|(x, i)| if i % 2 == 0 { Some((i, x)) } else { None })
             .try_for_each_init(
                 move || j.fetch_add(1, Ordering::Relaxed),
-                |item, init| -> Result<(), ()> {
-                    println!("{:?} - {:?}", item, init);
+                |init, item| -> Result<(), ()> {
+                    println!("{:?} - {:?}", init, item);
 
                     Ok(())
                 },
