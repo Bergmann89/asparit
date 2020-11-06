@@ -1,5 +1,6 @@
 pub mod cloned;
 pub mod collect;
+pub mod copied;
 pub mod for_each;
 pub mod map;
 pub mod map_init;
