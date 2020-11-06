@@ -1,6 +1,7 @@
 pub mod cloned;
 pub mod collect;
 pub mod copied;
+pub mod filter;
 pub mod for_each;
 pub mod inspect;
 pub mod map;
@@ -39,12 +40,13 @@ mod tests {
             .update(|x| x.push(5))
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
-                |init, item| Some((*init, item)),
+                |init, item| (item, *init),
             )
+            .filter(|(_, i)| i % 2 == 0)
             .try_for_each_init(
                 move || j.fetch_add(1, Ordering::Relaxed),
-                |init, item| -> Result<(), ()> {
-                    println!("{:?} {:?}", init, item);
+                |item, init| -> Result<(), ()> {
+                    println!("{:?} - {:?}", item, init);
 
                     Ok(())
                 },

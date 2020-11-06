@@ -7,6 +7,7 @@ use crate::{
         cloned::Cloned,
         collect::Collect,
         copied::Copied,
+        filter::Filter,
         for_each::ForEach,
         inspect::Inspect,
         map::Map,
@@ -491,6 +492,27 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(&mut Self::Item) + Clone + Send + 'a,
     {
         Update::new(self, operation)
+    }
+
+    /// Applies `operation` to each item of this iterator, producing a new
+    /// iterator with only the items that gave `true` results.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let mut par_iter = (0..10).into_par_iter().filter(|x| x % 2 == 0);
+    ///
+    /// let even_numbers: Vec<_> = par_iter.collect();
+    ///
+    /// assert_eq!(&even_numbers[..], &[0, 2, 4, 6, 8]);
+    /// ```
+    fn filter<O>(self, operation: O) -> Filter<Self, O>
+    where
+        O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Filter::new(self, operation)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.
