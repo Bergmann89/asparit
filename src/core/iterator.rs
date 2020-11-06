@@ -4,6 +4,7 @@ use super::{
 
 use crate::{
     inner::{
+        cloned::Cloned,
         collect::Collect,
         for_each::ForEach,
         map::Map,
@@ -373,6 +374,35 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         MapInit::new(self, init, operation)
+    }
+
+    /// Creates an iterator which clones all of its elements.  This may be
+    /// useful when you have an iterator over `&T`, but you need `T`, and
+    /// that type implements `Clone`. See also [`copied()`].
+    ///
+    /// [`copied()`]: #method.copied
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3];
+    ///
+    /// let v_cloned: Vec<_> = a.par_iter().cloned().collect();
+    ///
+    /// // cloned is the same as .map(|&x| x), for integers
+    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect();
+    ///
+    /// assert_eq!(v_cloned, vec![1, 2, 3]);
+    /// assert_eq!(v_map, vec![1, 2, 3]);
+    /// ```
+    fn cloned<T>(self) -> Cloned<Self>
+    where
+        T: Clone + Send + 'a,
+        Self: ParallelIterator<'a, Item = &'a T>,
+    {
+        Cloned::new(self)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.

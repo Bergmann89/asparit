@@ -1,3 +1,4 @@
+pub mod cloned;
 pub mod collect;
 pub mod for_each;
 pub mod map;
@@ -31,6 +32,7 @@ mod tests {
 
         let x = x
             .par_iter()
+            .cloned()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| Some((*init, item)),
