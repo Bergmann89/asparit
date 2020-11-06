@@ -8,6 +8,7 @@ use crate::{
         collect::Collect,
         copied::Copied,
         for_each::ForEach,
+        inspect::Inspect,
         map::Map,
         map_init::MapInit,
         map_with::MapWith,
@@ -433,6 +434,42 @@ pub trait ParallelIterator<'a>: Sized + Send {
         Self: ParallelIterator<'a, Item = &'a T>,
     {
         Copied::new(self)
+    }
+
+    /// Applies `operation` to a reference to each item of this iterator,
+    /// producing a new iterator passing through the original items.  This is
+    /// often useful for debugging to see what's happening in iterator stages.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 4, 2, 3];
+    ///
+    /// // this iterator sequence is complex.
+    /// let sum = a.par_iter()
+    ///             .cloned()
+    ///             .filter(|&x| x % 2 == 0)
+    ///             .reduce(|| 0, |sum, i| sum + i);
+    ///
+    /// println!("{}", sum);
+    ///
+    /// // let's add some inspect() calls to investigate what's happening
+    /// let sum = a.par_iter()
+    ///             .cloned()
+    ///             .inspect(|x| println!("about to filter: {}", x))
+    ///             .filter(|&x| x % 2 == 0)
+    ///             .inspect(|x| println!("made it through filter: {}", x))
+    ///             .reduce(|| 0, |sum, i| sum + i);
+    ///
+    /// println!("{}", sum);
+    /// ```
+    fn inspect<O>(self, operation: O) -> Inspect<Self, O>
+    where
+        O: Fn(&Self::Item) + Clone + Send + 'a,
+    {
+        Inspect::new(self, operation)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.

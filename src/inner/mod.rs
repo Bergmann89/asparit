@@ -2,6 +2,7 @@ pub mod cloned;
 pub mod collect;
 pub mod copied;
 pub mod for_each;
+pub mod inspect;
 pub mod map;
 pub mod map_init;
 pub mod map_with;
@@ -34,6 +35,7 @@ mod tests {
         let x = x
             .par_iter()
             .cloned()
+            .inspect(|x| println!("inspect: {:?}", x))
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| Some((*init, item)),
