@@ -15,6 +15,7 @@ use crate::{
         reduce::Reduce,
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::TryReduce,
+        update::Update,
     },
     misc::Try,
 };
@@ -470,6 +471,26 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(&Self::Item) + Clone + Send + 'a,
     {
         Inspect::new(self, operation)
+    }
+
+    /// Mutates each item of this iterator before yielding it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let par_iter = (0..5).into_par_iter().update(|x| {*x *= 2;});
+    ///
+    /// let doubles: Vec<_> = par_iter.collect();
+    ///
+    /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
+    /// ```
+    fn update<O>(self, operation: O) -> Update<Self, O>
+    where
+        O: Fn(&mut Self::Item) + Clone + Send + 'a,
+    {
+        Update::new(self, operation)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.

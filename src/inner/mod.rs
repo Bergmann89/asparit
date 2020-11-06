@@ -10,6 +10,7 @@ pub mod noop;
 pub mod reduce;
 pub mod try_for_each;
 pub mod try_reduce;
+pub mod update;
 
 #[cfg(test)]
 mod tests {
@@ -35,7 +36,7 @@ mod tests {
         let x = x
             .par_iter()
             .cloned()
-            .inspect(|x| println!("inspect: {:?}", x))
+            .update(|x| x.push(5))
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| Some((*init, item)),
