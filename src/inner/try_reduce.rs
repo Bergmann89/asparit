@@ -5,6 +5,8 @@ use std::sync::{
 
 use crate::{core::Driver, misc::Try, Consumer, Executor, Folder, ParallelIterator, Reducer};
 
+/* TryReduce */
+
 pub struct TryReduce<X, S, O> {
     iterator: X,
     identity: S,
@@ -43,6 +45,61 @@ where
         };
 
         iterator.drive(executor, consumer)
+    }
+}
+
+/* TryReduceWith */
+
+pub struct TryReduceWith<X, O> {
+    iterator: X,
+    operation: O,
+}
+
+impl<X, O> TryReduceWith<X, O> {
+    pub fn new(iterator: X, operation: O) -> Self {
+        Self {
+            iterator,
+            operation,
+        }
+    }
+}
+
+impl<'a, X, O, T> Driver<'a, Option<T>> for TryReduceWith<X, O>
+where
+    X: ParallelIterator<'a, Item = T>,
+    O: Fn(T::Ok, T::Ok) -> T + Clone + Send + 'a,
+    T: Try + Send,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, Option<T>>,
+    {
+        let fold_op = self.operation.clone();
+        let reduce_op = self.operation;
+
+        self.iterator
+            .fold(
+                || None,
+                move |a: Option<T>, b: T| match a {
+                    Some(a) => match (a.into_result(), b.into_result()) {
+                        (Ok(a), Ok(b)) => Some(fold_op(a, b)),
+                        (Err(e), _) | (_, Err(e)) => Some(T::from_error(e)),
+                    },
+                    None => Some(b),
+                },
+            )
+            .reduce(
+                || None,
+                move |a: Option<T>, b: Option<T>| match (a, b) {
+                    (Some(a), Some(b)) => match (a.into_result(), b.into_result()) {
+                        (Ok(a), Ok(b)) => Some(reduce_op(a, b)),
+                        (Err(e), _) | (_, Err(e)) => Some(T::from_error(e)),
+                    },
+                    (Some(v), None) | (None, Some(v)) => Some(v),
+                    (None, None) => None,
+                },
+            )
+            .exec_with(executor)
     }
 }
 

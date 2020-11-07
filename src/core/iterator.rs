@@ -20,11 +20,11 @@ use crate::{
         map_init::MapInit,
         map_with::MapWith,
         product::Product,
-        reduce::Reduce,
+        reduce::{Reduce, ReduceWith},
         sum::Sum,
         try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
-        try_reduce::TryReduce,
+        try_reduce::{TryReduce, TryReduceWith},
         update::Update,
     },
     misc::Try,
@@ -673,6 +673,39 @@ pub trait ParallelIterator<'a>: Sized + Send {
         Reduce::new(self, identity, operation)
     }
 
+    /// Reduces the items in the iterator into one item using `operation`.
+    /// If the iterator is empty, `None` is returned; otherwise,
+    /// `Some` is returned.
+    ///
+    /// This version of `reduce` is simple but somewhat less
+    /// efficient. If possible, it is better to call `reduce()`, which
+    /// requires an identity element.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// let sums = [(0, 1), (5, 6), (16, 2), (8, 9)]
+    ///            .par_iter()        // iterating over &(i32, i32)
+    ///            .cloned()          // iterating over (i32, i32)
+    ///            .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1))
+    ///            .unwrap();
+    /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
+    /// ```
+    ///
+    /// **Note:** unlike a sequential `fold` operation, the order in
+    /// which `operation` will be applied to reduce the result is not fully
+    /// specified. So `operation` should be [associative] or else the results
+    /// will be non-deterministic.
+    ///
+    /// [associative]: https://en.wikipedia.org/wiki/Associative_property
+    fn reduce_with<O>(self, operation: O) -> ReduceWith<Self, O>
+    where
+        O: Fn(Self::Item, Self::Item) -> Self::Item + Sync + Send + 'a,
+    {
+        ReduceWith::new(self, operation)
+    }
+
     /// Reduces the items in the iterator into one item using a fallible `operation`.
     /// The `identity` argument is used the same way as in [`reduce()`].
     ///
@@ -711,6 +744,49 @@ pub trait ParallelIterator<'a>: Sized + Send {
         Self::Item: Try<Ok = T>,
     {
         TryReduce::new(self, identity, operation)
+    }
+
+    /// Reduces the items in the iterator into one item using a fallible `operation`.
+    ///
+    /// Like [`reduce_with()`], if the iterator is empty, `None` is returned;
+    /// otherwise, `Some` is returned.  Beyond that, it behaves like
+    /// [`try_reduce()`] for handling `Err`/`None`.
+    ///
+    /// [`reduce_with()`]: #method.reduce_with
+    /// [`try_reduce()`]: #method.try_reduce
+    ///
+    /// For instance, with `Option` items, the return value may be:
+    /// - `None`, the iterator was empty
+    /// - `Some(None)`, we stopped after encountering `None`.
+    /// - `Some(Some(x))`, the entire iterator reduced to `x`.
+    ///
+    /// With `Result` items, the nesting is more obvious:
+    /// - `None`, the iterator was empty
+    /// - `Some(Err(e))`, we stopped after encountering an error `e`.
+    /// - `Some(Ok(x))`, the entire iterator reduced to `x`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let files = ["/dev/null", "/does/not/exist"];
+    ///
+    /// // Find the biggest file
+    /// files.into_par_iter()
+    ///     .map(|path| std::fs::metadata(path).map(|m| (path, m.len())))
+    ///     .try_reduce_with(|a, b| {
+    ///         Ok(if a.1 >= b.1 { a } else { b })
+    ///     })
+    ///     .expect("Some value, since the iterator is not empty")
+    ///     .expect_err("not found");
+    /// ```
+    fn try_reduce_with<O, T>(self, operation: O) -> TryReduceWith<Self, O>
+    where
+        Self::Item: Try<Ok = T>,
+        O: Fn(T, T) -> Self::Item + Sync + Send + 'a,
+    {
+        TryReduceWith::new(self, operation)
     }
 
     /// Parallel fold is similar to sequential fold except that the

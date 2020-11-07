@@ -1,5 +1,7 @@
 use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer};
 
+/* Reduce */
+
 pub struct Reduce<X, S, O> {
     iterator: X,
     identity: S,
@@ -36,6 +38,49 @@ where
         };
 
         iterator.drive(executor, consumer)
+    }
+}
+
+/* ReduceWith */
+
+pub struct ReduceWith<X, O> {
+    iterator: X,
+    operation: O,
+}
+
+impl<X, O> ReduceWith<X, O> {
+    pub fn new(iterator: X, operation: O) -> Self {
+        Self {
+            iterator,
+            operation,
+        }
+    }
+}
+
+impl<'a, X, O, T> Driver<'a, Option<T>> for ReduceWith<X, O>
+where
+    X: ParallelIterator<'a, Item = T>,
+    O: Fn(T, T) -> T + Clone + Send + 'a,
+    T: Send + 'a,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, Option<X::Item>>,
+    {
+        let fold_op = self.operation.clone();
+        let reduce_op = self.operation;
+
+        self.iterator
+            .fold(<_>::default, move |a, b| match a {
+                Some(a) => Some(fold_op(a, b)),
+                None => Some(b),
+            })
+            .reduce(<_>::default, move |a, b| match (a, b) {
+                (Some(a), Some(b)) => Some(reduce_op(a, b)),
+                (Some(v), None) | (None, Some(v)) => Some(v),
+                (None, None) => None,
+            })
+            .exec_with(executor)
     }
 }
 
