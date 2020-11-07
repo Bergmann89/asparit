@@ -9,6 +9,7 @@ use crate::{
         cloned::Cloned,
         collect::Collect,
         copied::Copied,
+        count::Count,
         filter::Filter,
         filter_map::FilterMap,
         flatten::{FlatMapIter, FlattenIter},
@@ -288,6 +289,21 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Try<Ok = ()> + Send + 'a,
     {
         TryForEachInit::new(self, init, operation)
+    }
+
+    /// Counts the number of items in this parallel iterator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let count = (0..100).into_par_iter().count();
+    ///
+    /// assert_eq!(count, 100);
+    /// ```
+    fn count(self) -> Count<Self> {
+        Count::new(self)
     }
 
     /// Applies `operation` to each item of this iterator, producing a new

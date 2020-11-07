@@ -1,6 +1,7 @@
 pub mod cloned;
 pub mod collect;
 pub mod copied;
+pub mod count;
 pub mod filter;
 pub mod filter_map;
 pub mod flatten;
