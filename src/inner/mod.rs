@@ -11,6 +11,7 @@ pub mod inspect;
 pub mod map;
 pub mod map_init;
 pub mod map_with;
+pub mod max;
 pub mod min;
 pub mod noop;
 pub mod product;
