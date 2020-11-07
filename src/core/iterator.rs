@@ -1,3 +1,5 @@
+use std::iter::IntoIterator;
+
 use super::{
     Consumer, Executor, FromParallelIterator, IndexedProducerCallback, ProducerCallback, Reducer,
 };
@@ -9,6 +11,7 @@ use crate::{
         copied::Copied,
         filter::Filter,
         filter_map::FilterMap,
+        flatten::{FlatMapIter, FlattenIter},
         fold::{Fold, FoldWith},
         for_each::ForEach,
         inspect::Inspect,
@@ -541,6 +544,77 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(Self::Item) -> Option<S> + Clone + Send + 'a,
     {
         FilterMap::new(self, operation)
+    }
+
+    /// Applies `operation` to each item of this iterator to get nested serial iterators,
+    /// producing a new parallel iterator that flattens these back into one.
+    ///
+    /// # `flat_map_iter` versus `flat_map`
+    ///
+    /// These two methods are similar but behave slightly differently. With [`flat_map`],
+    /// each of the nested iterators must be a parallel iterator, and they will be further
+    /// split up with nested parallelism. With `flat_map_iter`, each nested iterator is a
+    /// sequential `Iterator`, and we only parallelize _between_ them, while the items
+    /// produced by each nested iterator are processed sequentially.
+    ///
+    /// When choosing between these methods, consider whether nested parallelism suits the
+    /// potential iterators at hand. If there's little computation involved, or its length
+    /// is much less than the outer parallel iterator, then it may perform better to avoid
+    /// the overhead of parallelism, just flattening sequentially with `flat_map_iter`.
+    /// If there is a lot of computation, potentially outweighing the outer parallel
+    /// iterator, then the nested parallelism of `flat_map` may be worthwhile.
+    ///
+    /// [`flat_map`]: #method.flat_map
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use std::cell::RefCell;
+    ///
+    /// let a = [[1, 2], [3, 4], [5, 6], [7, 8]];
+    ///
+    /// let par_iter = a.par_iter().flat_map_iter(|a| {
+    ///     // The serial iterator doesn't have to be thread-safe, just its items.
+    ///     let cell_iter = RefCell::new(a.iter().cloned());
+    ///     std::iter::from_fn(move || cell_iter.borrow_mut().next())
+    /// });
+    ///
+    /// let vec: Vec<_> = par_iter.collect();
+    ///
+    /// assert_eq!(&vec[..], &[1, 2, 3, 4, 5, 6, 7, 8]);
+    /// ```
+    fn flat_map_iter<O, SI>(self, operation: O) -> FlatMapIter<Self, O>
+    where
+        O: Fn(Self::Item) -> SI + Clone + Send + 'a,
+        SI: IntoIterator,
+        SI::Item: Send,
+    {
+        FlatMapIter::new(self, operation)
+    }
+
+    /// An adaptor that flattens serial-iterable `Item`s into one large iterator.
+    ///
+    /// See also [`flatten`](#method.flatten) and the analagous comparison of
+    /// [`flat_map_iter` versus `flat_map`](#flat_map_iter-versus-flat_map).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let x: Vec<Vec<_>> = vec![vec![1, 2], vec![3, 4]];
+    /// let iters: Vec<_> = x.into_iter().map(Vec::into_iter).collect();
+    /// let y: Vec<_> = iters.into_par_iter().flatten_iter().collect();
+    ///
+    /// assert_eq!(y, vec![1, 2, 3, 4]);
+    /// ```
+    fn flatten_iter(self) -> FlattenIter<Self>
+    where
+        Self::Item: IntoIterator + Send,
+        <Self::Item as IntoIterator>::Item: Send,
+    {
+        FlattenIter::new(self)
     }
 
     /// Reduces the items in the iterator into one item using `operation`.

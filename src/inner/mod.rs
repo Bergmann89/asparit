@@ -3,6 +3,7 @@ pub mod collect;
 pub mod copied;
 pub mod filter;
 pub mod filter_map;
+pub mod flatten;
 pub mod fold;
 pub mod for_each;
 pub mod inspect;
@@ -38,6 +39,7 @@ mod tests {
             .par_iter()
             .cloned()
             .update(|x| x.push(0))
+            .flatten_iter()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| (item, *init),
