@@ -18,7 +18,9 @@ use crate::{
         map::Map,
         map_init::MapInit,
         map_with::MapWith,
+        product::Product,
         reduce::Reduce,
+        sum::Sum,
         try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::TryReduce,
@@ -923,6 +925,70 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Try<Ok = U>,
     {
         TryFoldWith::new(self, init, operation)
+    }
+
+    /// Sums up the items in the iterator.
+    ///
+    /// Note that the order in items will be reduced is not specified,
+    /// so if the `+` operator is not truly [associative] \(as is the
+    /// case for floating point numbers), then the results are not
+    /// fully deterministic.
+    ///
+    /// [associative]: https://en.wikipedia.org/wiki/Associative_property
+    ///
+    /// Basically equivalent to `self.reduce(|| 0, |a, b| a + b)`,
+    /// except that the type of `0` and the `+` operation may vary
+    /// depending on the type of value being produced.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 5, 7];
+    ///
+    /// let sum: i32 = a.par_iter().sum();
+    ///
+    /// assert_eq!(sum, 13);
+    /// ```
+    fn sum<S>(self) -> Sum<Self, S>
+    where
+        S: std::iter::Sum<Self::Item> + std::iter::Sum<S> + Send,
+    {
+        Sum::new(self)
+    }
+
+    /// Multiplies all the items in the iterator.
+    ///
+    /// Note that the order in items will be reduced is not specified,
+    /// so if the `*` operator is not truly [associative] \(as is the
+    /// case for floating point numbers), then the results are not
+    /// fully deterministic.
+    ///
+    /// [associative]: https://en.wikipedia.org/wiki/Associative_property
+    ///
+    /// Basically equivalent to `self.reduce(|| 1, |a, b| a * b)`,
+    /// except that the type of `1` and the `*` operation may vary
+    /// depending on the type of value being produced.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// fn factorial(n: u32) -> u32 {
+    ///    (1..n+1).into_par_iter().product()
+    /// }
+    ///
+    /// assert_eq!(factorial(0), 1);
+    /// assert_eq!(factorial(1), 1);
+    /// assert_eq!(factorial(5), 120);
+    /// ```
+    fn product<P>(self) -> Product<Self, P>
+    where
+        P: std::iter::Product<Self::Item> + std::iter::Product<P> + Send,
+    {
+        Product::new(self)
     }
 
     /// Creates a fresh collection containing all the elements produced

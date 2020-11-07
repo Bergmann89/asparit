@@ -11,7 +11,9 @@ pub mod map;
 pub mod map_init;
 pub mod map_with;
 pub mod noop;
+pub mod product;
 pub mod reduce;
+pub mod sum;
 pub mod try_fold;
 pub mod try_for_each;
 pub mod try_reduce;
@@ -51,7 +53,6 @@ mod tests {
                 move || j.fetch_add(1, Ordering::Relaxed),
                 |init, item| -> Result<(), ()> {
                     println!("{:?} - {:?}", init, item);
-
                     Ok(())
                 },
             )
