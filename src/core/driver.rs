@@ -2,7 +2,7 @@ use crate::{DefaultExecutor, Executor};
 
 pub trait Driver<'a, D>: Sized
 where
-    D: Send,
+    D: Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
     where

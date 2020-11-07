@@ -22,7 +22,7 @@ impl<X, T> Collect<X, T> {
 impl<'a, X, T> Driver<'a, T> for Collect<X, T>
 where
     X: ParallelIterator<'a>,
-    T: FromParallelIterator<X::Item> + Send,
+    T: FromParallelIterator<X::Item> + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
     where

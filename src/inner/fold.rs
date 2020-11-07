@@ -23,7 +23,7 @@ where
     X: ParallelIterator<'a>,
     S: Fn() -> U + Clone + Send + 'a,
     O: Fn(U, X::Item) -> U + Clone + Send + 'a,
-    U: Send,
+    U: Send + 'a,
 {
     type Item = U;
 
@@ -31,8 +31,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base.drive(
             executor,
@@ -86,8 +86,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         let FoldWith {
             base,

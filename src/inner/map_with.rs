@@ -25,7 +25,7 @@ impl<'a, X, O, T, S> ParallelIterator<'a> for MapWith<X, S, O>
 where
     X: ParallelIterator<'a>,
     O: Fn(&mut S, X::Item) -> T + Clone + Sync + Send + 'a,
-    T: Send,
+    T: Send + 'a,
     S: Clone + Send + 'a,
 {
     type Item = T;
@@ -34,8 +34,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         let consumer = MapWithConsumer::new(consumer, self.item, self.operation);
 
@@ -62,15 +62,15 @@ impl<'a, X, O, T, S> IndexedParallelIterator<'a> for MapWith<X, S, O>
 where
     X: IndexedParallelIterator<'a>,
     O: Fn(&mut S, X::Item) -> T + Clone + Sync + Send + 'a,
-    T: Send,
+    T: Send + 'a,
     S: Clone + Send + 'a,
 {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         let consumer = MapWithConsumer::new(consumer, self.item, self.operation);
 

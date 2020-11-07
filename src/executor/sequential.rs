@@ -5,7 +5,7 @@ pub struct Sequential;
 
 impl<'a, D> Executor<'a, D> for Sequential
 where
-    D: Send,
+    D: Send + 'a,
 {
     type Result = D;
 
@@ -33,5 +33,16 @@ where
         } else {
             producer.fold_with(consumer.into_folder()).complete()
         }
+    }
+
+    fn split(self) -> (Self, Self) {
+        (Self, Self)
+    }
+
+    fn join<R>(left: D, right: D, reducer: R) -> Self::Result
+    where
+        R: Reducer<D> + Send,
+    {
+        reducer.reduce(left, right)
     }
 }

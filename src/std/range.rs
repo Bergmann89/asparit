@@ -91,8 +91,8 @@ macro_rules! unindexed_parallel_iterator_impl {
             where
                 E: Executor<'a, D>,
                 C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-                D: Send,
-                R: Reducer<D> + Send,
+                D: Send + 'a,
+                R: Reducer<D> + Send + 'a,
             {
                 self.with_producer(ExecutorCallback::new(executor, consumer))
             }
@@ -144,8 +144,8 @@ macro_rules! indexed_parallel_iterator_impl {
             where
                 E: Executor<'a, D>,
                 C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-                D: Send,
-                R: Reducer<D> + Send,
+                D: Send + 'a,
+                R: Reducer<D> + Send + 'a,
             {
                 self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
             }

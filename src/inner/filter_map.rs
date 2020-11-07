@@ -17,7 +17,7 @@ impl<'a, X, O, S> ParallelIterator<'a> for FilterMap<X, O>
 where
     X: ParallelIterator<'a>,
     O: Fn(X::Item) -> Option<S> + Clone + Send + 'a,
-    S: Send,
+    S: Send + 'a,
 {
     type Item = S;
 
@@ -25,8 +25,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base.drive(
             executor,

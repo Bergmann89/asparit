@@ -17,8 +17,8 @@ impl<X> FlattenIter<X> {
 impl<'a, X, SI> ParallelIterator<'a> for FlattenIter<X>
 where
     X: ParallelIterator<'a, Item = SI>,
-    SI: IntoIterator + Send,
-    SI::Item: Send,
+    SI: IntoIterator + Send + 'a,
+    SI::Item: Send + 'a,
 {
     type Item = SI::Item;
 
@@ -26,8 +26,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base.drive(
             executor,
@@ -66,8 +66,8 @@ impl<'a, X, O, SI> ParallelIterator<'a> for FlatMapIter<X, O>
 where
     X: ParallelIterator<'a>,
     O: Fn(X::Item) -> SI + Clone + Send + 'a,
-    SI: IntoIterator,
-    SI::Item: Send,
+    SI: IntoIterator + 'a,
+    SI::Item: Send + 'a,
 {
     type Item = SI::Item;
 
@@ -75,8 +75,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base.drive(
             executor,

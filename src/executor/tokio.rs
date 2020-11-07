@@ -29,7 +29,7 @@ impl Default for Tokio {
 
 impl<'a, D> Executor<'a, D> for Tokio
 where
-    D: Send,
+    D: Send + 'a,
 {
     type Result = BoxFuture<'a, D>;
 
@@ -37,7 +37,7 @@ where
     where
         P: Producer + 'a,
         C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send,
+        R: Reducer<D> + Send + 'a,
     {
         let splits = producer.splits().unwrap_or(self.splits);
         let splitter = Splitter::new(splits);
@@ -49,7 +49,7 @@ where
     where
         P: IndexedProducer + 'a,
         C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send,
+        R: Reducer<D> + Send + 'a,
     {
         let splits = producer.splits().unwrap_or(self.splits);
         let splitter = IndexedSplitter::new(
@@ -60,6 +60,31 @@ where
         );
 
         exec_indexed(splitter, producer, consumer)
+    }
+
+    fn split(self) -> (Self, Self) {
+        let mut left = self;
+        let right = Self {
+            splits: left.splits / 2,
+        };
+
+        left.splits -= right.splits;
+
+        (left, right)
+    }
+
+    fn join<R>(left: Self::Result, right: Self::Result, reducer: R) -> Self::Result
+    where
+        R: Reducer<D> + Send + 'a,
+        D: 'a,
+    {
+        async move {
+            let left = left.await;
+            let right = right.await;
+
+            reducer.reduce(left, right)
+        }
+        .boxed()
     }
 }
 

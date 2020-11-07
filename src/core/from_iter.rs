@@ -58,7 +58,8 @@ where
     fn from_par_iter<'a, E, X>(executor: E, iterator: X) -> E::Result
     where
         E: Executor<'a, Self>,
-        X: IntoParallelIterator<'a, Item = T>;
+        X: IntoParallelIterator<'a, Item = T>,
+        T: 'a;
 }
 
 impl FromParallelIterator<()> for () {

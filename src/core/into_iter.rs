@@ -13,7 +13,7 @@ pub trait IntoParallelIterator<'a> {
     type Iter: ParallelIterator<'a, Item = Self::Item>;
 
     /// The type of item that the parallel iterator will produce.
-    type Item: Send;
+    type Item: Send + 'a;
 
     /// Converts `self` into a parallel iterator.
     ///

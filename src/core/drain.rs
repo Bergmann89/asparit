@@ -15,7 +15,7 @@ pub trait ParallelDrainFull<'a> {
 
     /// The type of item that the parallel iterator will produce.
     /// This is usually the same as `IntoParallelIterator::Item`.
-    type Item: Send;
+    type Item: Send + 'a;
 
     /// Returns a draining parallel iterator over an entire collection.
     ///
@@ -57,7 +57,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
 
     /// The type of item that the parallel iterator will produce.
     /// This is usually the same as `IntoParallelIterator::Item`.
-    type Item: Send;
+    type Item: Send + 'a;
 
     /// Returns a draining parallel iterator over a range of the collection.
     ///

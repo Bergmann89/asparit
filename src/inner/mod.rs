@@ -1,3 +1,4 @@
+pub mod chain;
 pub mod cloned;
 pub mod collect;
 pub mod copied;
@@ -34,15 +35,21 @@ mod tests {
         let i = Arc::new(AtomicUsize::new(0));
         let j = Arc::new(AtomicUsize::new(0));
 
-        let x = vec![
+        let a = vec![
             vec![1usize, 2usize],
             vec![3usize, 4usize],
             vec![5usize, 6usize],
         ];
+        let b = vec![
+            vec![7usize, 8usize],
+            vec![9usize, 10usize],
+            vec![11usize, 12usize],
+        ];
 
-        let x = x
+        let x = a
             .par_iter()
             .cloned()
+            .chain(b)
             .update(|x| x.push(0))
             .flatten_iter()
             .map_init(

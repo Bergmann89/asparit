@@ -2,11 +2,13 @@ use std::cmp::{Ord, Ordering};
 use std::iter::IntoIterator;
 
 use super::{
-    Consumer, Executor, FromParallelIterator, IndexedProducerCallback, ProducerCallback, Reducer,
+    Consumer, Executor, FromParallelIterator, IndexedProducerCallback, IntoParallelIterator,
+    ProducerCallback, Reducer,
 };
 
 use crate::{
     inner::{
+        chain::Chain,
         cloned::Cloned,
         collect::Collect,
         copied::Copied,
@@ -53,7 +55,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// item that your closure will be invoked with.
     ///
     /// [`for_each`]: #method.for_each
-    type Item: Send;
+    type Item: Send + 'a;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -71,8 +73,8 @@ pub trait ParallelIterator<'a>: Sized + Send {
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send;
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -1194,6 +1196,29 @@ pub trait ParallelIterator<'a>: Sized + Send {
         MaxBy::new(self, operation)
     }
 
+    /// Takes two iterators and creates a new iterator over both.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [0, 1, 2];
+    /// let b = [9, 8, 7];
+    ///
+    /// let par_iter = a.par_iter().chain(b.par_iter());
+    ///
+    /// let chained: Vec<_> = par_iter.cloned().collect();
+    ///
+    /// assert_eq!(&chained[..], &[0, 1, 2, 9, 8, 7]);
+    /// ```
+    fn chain<C>(self, chain: C) -> Chain<Self, C::Iter>
+    where
+        C: IntoParallelIterator<'a, Item = Self::Item>,
+    {
+        Chain::new(self, chain.into_par_iter())
+    }
+
     /// Creates a fresh collection containing all the elements produced
     /// by this parallel iterator.
     ///
@@ -1250,8 +1275,8 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send;
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.

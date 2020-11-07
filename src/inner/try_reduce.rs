@@ -28,7 +28,7 @@ where
     X: ParallelIterator<'a, Item = T>,
     S: Fn() -> T::Ok + Clone + Send + 'a,
     O: Fn(T::Ok, T::Ok) -> T + Clone + Send + 'a,
-    T: Try + Send,
+    T: Try + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
     where
@@ -68,7 +68,7 @@ impl<'a, X, O, T> Driver<'a, Option<T>> for TryReduceWith<X, O>
 where
     X: ParallelIterator<'a, Item = T>,
     O: Fn(T::Ok, T::Ok) -> T + Clone + Send + 'a,
-    T: Try + Send,
+    T: Try + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
     where

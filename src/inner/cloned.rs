@@ -26,8 +26,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base.drive(executor, ClonedConsumer { base: consumer })
     }
@@ -53,8 +53,8 @@ where
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
-        D: Send,
-        R: Reducer<D> + Send,
+        D: Send + 'a,
+        R: Reducer<D> + Send + 'a,
     {
         self.base
             .drive_indexed(executor, ClonedConsumer { base: consumer })
