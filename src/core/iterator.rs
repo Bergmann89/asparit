@@ -16,6 +16,7 @@ use crate::{
         map_init::MapInit,
         map_with::MapWith,
         reduce::Reduce,
+        try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::TryReduce,
         update::Update,
@@ -787,6 +788,67 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(U, Self::Item) -> U + Clone + Send + 'a,
     {
         FoldWith::new(self, init, operation)
+    }
+
+    /// Performs a fallible parallel fold.
+    ///
+    /// This is a variation of [`fold()`] for operations which can fail with
+    /// `Option::None` or `Result::Err`.  The first such failure stops
+    /// processing the local set of items, without affecting other folds in the
+    /// iterator's subdivisions.
+    ///
+    /// Often, `try_fold()` will be followed by [`try_reduce()`]
+    /// for a final reduction and global short-circuiting effect.
+    ///
+    /// [`fold()`]: #method.fold
+    /// [`try_reduce()`]: #method.try_reduce
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let bytes = 0..22_u8;
+    /// let sum = bytes.into_par_iter()
+    ///                .try_fold(|| 0_u32, |a: u32, b: u8| a.checked_add(b as u32))
+    ///                .try_reduce(|| 0, u32::checked_add);
+    ///
+    /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
+    /// ```
+    fn try_fold<S, O, U, T>(self, init: S, operation: O) -> TryFold<Self, S, O, T>
+    where
+        S: Fn() -> U + Clone + Send + 'a,
+        O: Fn(U, Self::Item) -> T + Clone + Send + 'a,
+        T: Try<Ok = U> + Send,
+    {
+        TryFold::new(self, init, operation)
+    }
+
+    /// Performs a fallible parallel fold with a cloneable `init` value.
+    ///
+    /// This combines the `init` semantics of [`fold_with()`] and the failure
+    /// semantics of [`try_fold()`].
+    ///
+    /// [`fold_with()`]: #method.fold_with
+    /// [`try_fold()`]: #method.try_fold
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let bytes = 0..22_u8;
+    /// let sum = bytes.into_par_iter()
+    ///                .try_fold_with(0_u32, |a: u32, b: u8| a.checked_add(b as u32))
+    ///                .try_reduce(|| 0, u32::checked_add);
+    ///
+    /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
+    /// ```
+    fn try_fold_with<U, O, T>(self, init: U, operation: O) -> TryFoldWith<Self, U, O, T>
+    where
+        U: Clone + Send + 'a,
+        O: Fn(U, Self::Item) -> T + Clone + Send + 'a,
+        T: Try<Ok = U>,
+    {
+        TryFoldWith::new(self, init, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced

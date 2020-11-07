@@ -11,6 +11,7 @@ pub mod map_init;
 pub mod map_with;
 pub mod noop;
 pub mod reduce;
+pub mod try_fold;
 pub mod try_for_each;
 pub mod try_reduce;
 pub mod update;
@@ -41,7 +42,9 @@ mod tests {
                 move || i.fetch_add(1, Ordering::Relaxed),
                 |init, item| (item, *init),
             )
-            .fold_with(String::new(), |s, item| format!("{} + {:?}", s, item))
+            .try_fold_with(String::new(), |s, item| -> Result<String, ()> {
+                Ok(format!("{} + {:?}", s, item))
+            })
             .try_for_each_init(
                 move || j.fetch_add(1, Ordering::Relaxed),
                 |init, item| -> Result<(), ()> {
