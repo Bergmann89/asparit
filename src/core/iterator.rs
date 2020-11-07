@@ -1,3 +1,4 @@
+use std::cmp::{Ord, Ordering};
 use std::iter::IntoIterator;
 
 use super::{
@@ -19,6 +20,7 @@ use crate::{
         map::Map,
         map_init::MapInit,
         map_with::MapWith,
+        min::{Min, MinBy},
         product::Product,
         reduce::{Reduce, ReduceWith},
         sum::Sum,
@@ -1081,6 +1083,60 @@ pub trait ParallelIterator<'a>: Sized + Send {
         P: std::iter::Product<Self::Item> + std::iter::Product<P> + Send,
     {
         Product::new(self)
+    }
+
+    /// Computes the minimum of all the items in the iterator. If the
+    /// iterator is empty, `None` is returned; otherwise, `Some(min)`
+    /// is returned.
+    ///
+    /// Note that the order in which the items will be reduced is not
+    /// specified, so if the `Ord` impl is not truly associative, then
+    /// the results are not deterministic.
+    ///
+    /// Basically equivalent to `self.reduce_with(|a, b| cmp::min(a, b))`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [45, 74, 32];
+    ///
+    /// assert_eq!(a.par_iter().min(), Some(&32));
+    ///
+    /// let b: [i32; 0] = [];
+    ///
+    /// assert_eq!(b.par_iter().min(), None);
+    /// ```
+    fn min(self) -> Min<Self>
+    where
+        Self::Item: Ord,
+    {
+        Min::new(self)
+    }
+
+    /// Computes the minimum of all the items in the iterator with respect to
+    /// the given comparison function. If the iterator is empty, `None` is
+    /// returned; otherwise, `Some(min)` is returned.
+    ///
+    /// Note that the order in which the items will be reduced is not
+    /// specified, so if the comparison function is not associative, then
+    /// the results are not deterministic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [-3_i32, 77, 53, 240, -1];
+    ///
+    /// assert_eq!(a.par_iter().min_by(|x, y| x.cmp(y)), Some(&-3));
+    /// ```
+    fn min_by<O>(self, operation: O) -> MinBy<Self, O>
+    where
+        O: Fn(&Self::Item, &Self::Item) -> Ordering + Clone + Send + Sync + 'a,
+    {
+        MinBy::new(self, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced
