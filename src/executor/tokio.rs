@@ -27,17 +27,20 @@ impl Default for Tokio {
     }
 }
 
-impl<'a, D> Executor<'a, D> for Tokio
+impl<'a, T1, T2, T3> Executor<'a, T1, T2, T3> for Tokio
 where
-    D: Send + 'a,
+    T1: Send + 'a,
+    T2: Send + 'a,
+    T3: Send + 'a,
 {
-    type Result = BoxFuture<'a, D>;
+    type Result = BoxFuture<'a, T1>;
+    type Inner = Tokio;
 
     fn exec<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: Producer + 'a,
-        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send + 'a,
+        C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
+        R: Reducer<T1> + Send + 'a,
     {
         let splits = producer.splits().unwrap_or(self.splits);
         let splitter = Splitter::new(splits);
@@ -48,8 +51,8 @@ where
     fn exec_indexed<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: IndexedProducer + 'a,
-        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send + 'a,
+        C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
+        R: Reducer<T1> + Send + 'a,
     {
         let splits = producer.splits().unwrap_or(self.splits);
         let splitter = IndexedSplitter::new(
@@ -75,14 +78,33 @@ where
 
     fn join<R>(left: Self::Result, right: Self::Result, reducer: R) -> Self::Result
     where
-        R: Reducer<D> + Send + 'a,
-        D: 'a,
+        R: Reducer<T1> + Send + 'a,
+        T1: 'a,
     {
         async move {
             let left = left.await;
             let right = right.await;
 
             reducer.reduce(left, right)
+        }
+        .boxed()
+    }
+
+    fn into_inner(self) -> Self::Inner {
+        self
+    }
+
+    fn map<O>(
+        inner: <Self::Inner as Executor<'a, T2, T3, ()>>::Result,
+        operation: O,
+    ) -> Self::Result
+    where
+        O: Fn(T2) -> T1 + Send + 'a,
+    {
+        async move {
+            let value = inner.await;
+
+            operation(value)
         }
         .boxed()
     }

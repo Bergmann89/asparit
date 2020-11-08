@@ -2,30 +2,42 @@ use super::{
     Consumer, IndexedProducer, IndexedProducerCallback, Producer, ProducerCallback, Reducer,
 };
 
-pub trait Executor<'a, D>: Sized
+pub trait Executor<'a, T1, T2 = (), T3 = ()>: Sized
 where
-    D: Send + 'a,
+    T1: Send + 'a,
+    T2: Send + 'a,
+    T3: Send + 'a,
 {
     type Result: Send;
+    type Inner: Executor<'a, T2, T3, ()>;
 
     fn exec<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: Producer + 'a,
-        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send + 'a;
+        C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
+        R: Reducer<T1> + Send + 'a;
 
     fn exec_indexed<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where
         P: IndexedProducer + 'a,
-        C: Consumer<P::Item, Result = D, Reducer = R> + 'a,
-        R: Reducer<D> + Send + 'a;
+        C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
+        R: Reducer<T1> + Send + 'a;
 
     fn split(self) -> (Self, Self);
 
     fn join<R>(left: Self::Result, right: Self::Result, reducer: R) -> Self::Result
     where
-        R: Reducer<D> + Send + 'a,
-        D: 'a;
+        R: Reducer<T1> + Send + 'a,
+        T1: 'a;
+
+    fn into_inner(self) -> Self::Inner;
+
+    fn map<O>(
+        inner: <Self::Inner as Executor<'a, T2, T3, ()>>::Result,
+        operation: O,
+    ) -> Self::Result
+    where
+        O: Fn(T2) -> T1 + Send + 'a;
 }
 
 pub struct ExecutorCallback<E, C> {
@@ -39,12 +51,12 @@ impl<E, C> ExecutorCallback<E, C> {
     }
 }
 
-impl<'a, E, D, C, I, R> ProducerCallback<'a, I> for ExecutorCallback<E, C>
+impl<'a, E, T1, C, I, R> ProducerCallback<'a, I> for ExecutorCallback<E, C>
 where
-    E: Executor<'a, D>,
-    D: Send + 'a,
-    C: Consumer<I, Result = D, Reducer = R> + 'a,
-    R: Reducer<D> + Send + 'a,
+    E: Executor<'a, T1>,
+    T1: Send + 'a,
+    C: Consumer<I, Result = T1, Reducer = R> + 'a,
+    R: Reducer<T1> + Send + 'a,
 {
     type Output = E::Result;
 
@@ -56,12 +68,12 @@ where
     }
 }
 
-impl<'a, E, D, C, I, R> IndexedProducerCallback<'a, I> for ExecutorCallback<E, C>
+impl<'a, E, T1, C, I, R> IndexedProducerCallback<'a, I> for ExecutorCallback<E, C>
 where
-    E: Executor<'a, D>,
-    D: Send + 'a,
-    C: Consumer<I, Result = D, Reducer = R> + 'a,
-    R: Reducer<D> + Send + 'a,
+    E: Executor<'a, T1>,
+    T1: Send + 'a,
+    C: Consumer<I, Result = T1, Reducer = R> + 'a,
+    R: Reducer<T1> + Send + 'a,
 {
     type Output = E::Result;
 

@@ -63,3 +63,45 @@ where
             .exec_with(executor)
     }
 }
+
+/* MaxByKey */
+
+pub struct MaxByKey<X, O> {
+    iterator: X,
+    operation: O,
+}
+
+impl<X, O> MaxByKey<X, O> {
+    pub fn new(iterator: X, operation: O) -> Self {
+        Self {
+            iterator,
+            operation,
+        }
+    }
+}
+
+impl<'a, X, O, K> Driver<'a, Option<X::Item>, Option<(K, X::Item)>> for MaxByKey<X, O>
+where
+    X: ParallelIterator<'a>,
+    O: Fn(&X::Item) -> K + Clone + Send + Sync + 'a,
+    K: Send + Ord + 'a,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, Option<X::Item>, Option<(K, X::Item)>>,
+    {
+        let operation = self.operation;
+        let executor = executor.into_inner();
+
+        let ret = self
+            .iterator
+            .map(move |x| (operation(&x), x))
+            .reduce_with(|a, b| match (a.0).cmp(&b.0) {
+                Ordering::Greater => a,
+                _ => b,
+            })
+            .exec_with(executor);
+
+        E::map(ret, |x| x.map(|x| x.1))
+    }
+}

@@ -22,8 +22,8 @@ use crate::{
         map::Map,
         map_init::MapInit,
         map_with::MapWith,
-        max::{Max, MaxBy},
-        min::{Min, MinBy},
+        max::{Max, MaxBy, MaxByKey},
+        min::{Min, MinBy, MinByKey},
         product::Product,
         reduce::{Reduce, ReduceWith},
         sum::Sum,
@@ -1142,6 +1142,31 @@ pub trait ParallelIterator<'a>: Sized + Send {
         MinBy::new(self, operation)
     }
 
+    /// Computes the item that yields the minimum value for the given
+    /// function. If the iterator is empty, `None` is returned;
+    /// otherwise, `Some(item)` is returned.
+    ///
+    /// Note that the order in which the items will be reduced is not
+    /// specified, so if the `Ord` impl is not truly associative, then
+    /// the results are not deterministic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
+    ///
+    /// assert_eq!(a.par_iter().min_by_key(|x| x.abs()), Some(&2));
+    /// ```
+    fn min_by_key<O, K>(self, operation: O) -> MinByKey<Self, O>
+    where
+        O: Fn(&Self::Item) -> K + Clone + Send + 'a,
+        K: Ord + Send,
+    {
+        MinByKey::new(self, operation)
+    }
+
     /// Computes the maximum of all the items in the iterator. If the
     /// iterator is empty, `None` is returned; otherwise, `Some(max)`
     /// is returned.
@@ -1194,6 +1219,31 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(&Self::Item, &Self::Item) -> Ordering + Clone + Send + Sync + 'a,
     {
         MaxBy::new(self, operation)
+    }
+
+    /// Computes the item that yields the maximum value for the given
+    /// function. If the iterator is empty, `None` is returned;
+    /// otherwise, `Some(item)` is returned.
+    ///
+    /// Note that the order in which the items will be reduced is not
+    /// specified, so if the `Ord` impl is not truly associative, then
+    /// the results are not deterministic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
+    ///
+    /// assert_eq!(a.par_iter().max_by_key(|x| x.abs()), Some(&34));
+    /// ```
+    fn max_by_key<O, K>(self, operation: O) -> MaxByKey<Self, O>
+    where
+        O: Fn(&Self::Item) -> K + Clone + Send + 'a,
+        K: Ord + Send,
+    {
+        MaxByKey::new(self, operation)
     }
 
     /// Takes two iterators and creates a new iterator over both.
