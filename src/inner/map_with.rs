@@ -24,7 +24,7 @@ impl<X, S, O> MapWith<X, S, O> {
 impl<'a, X, O, T, S> ParallelIterator<'a> for MapWith<X, S, O>
 where
     X: ParallelIterator<'a>,
-    O: Fn(&mut S, X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut S, X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
     S: Clone + Send + 'a,
 {
@@ -61,7 +61,7 @@ where
 impl<'a, X, O, T, S> IndexedParallelIterator<'a> for MapWith<X, S, O>
 where
     X: IndexedParallelIterator<'a>,
-    O: Fn(&mut S, X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut S, X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
     S: Clone + Send + 'a,
 {
@@ -104,7 +104,7 @@ struct MapWithCallback<CB, S, O> {
 impl<'a, I, S, O, T, CB> ProducerCallback<'a, I> for MapWithCallback<CB, S, O>
 where
     CB: ProducerCallback<'a, T>,
-    O: Fn(&mut S, I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut S, I) -> T + Clone + Send + 'a,
     T: Send,
     S: Clone + Send + 'a,
 {
@@ -127,7 +127,7 @@ where
 impl<'a, I, S, O, T, CB> IndexedProducerCallback<'a, I> for MapWithCallback<CB, S, O>
 where
     CB: IndexedProducerCallback<'a, T>,
-    O: Fn(&mut S, I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut S, I) -> T + Clone + Send + 'a,
     T: Send,
     S: Clone + Send + 'a,
 {
@@ -158,7 +158,7 @@ struct MapWithProducer<P, S, O> {
 impl<P, S, O, T> Producer for MapWithProducer<P, S, O>
 where
     P: Producer,
-    O: Fn(&mut S, P::Item) -> T + Clone + Sync + Send,
+    O: Fn(&mut S, P::Item) -> T + Clone + Send,
     T: Send,
     S: Clone + Send,
 {
@@ -209,7 +209,7 @@ where
 impl<P, S, O, T> IndexedProducer for MapWithProducer<P, S, O>
 where
     P: IndexedProducer,
-    O: Fn(&mut S, P::Item) -> T + Clone + Sync + Send,
+    O: Fn(&mut S, P::Item) -> T + Clone + Send,
     T: Send,
     S: Clone + Send,
 {
@@ -337,7 +337,7 @@ impl<C, S, O> MapWithConsumer<C, S, O> {
 impl<I, T, C, S, O> Consumer<I> for MapWithConsumer<C, S, O>
 where
     C: Consumer<T>,
-    O: Fn(&mut S, I) -> T + Clone + Send + Sync,
+    O: Fn(&mut S, I) -> T + Clone + Send,
     T: Send,
     S: Clone + Send,
 {

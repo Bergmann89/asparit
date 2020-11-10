@@ -88,6 +88,82 @@ where
     }
 }
 
+/* Any */
+
+pub struct Any<X, O> {
+    iterator: X,
+    operation: O,
+}
+
+impl<X, O> Any<X, O> {
+    pub fn new(iterator: X, operation: O) -> Self {
+        Self {
+            iterator,
+            operation,
+        }
+    }
+}
+
+impl<'a, X, O> Driver<'a, bool, Option<bool>> for Any<X, O>
+where
+    X: ParallelIterator<'a>,
+    O: Fn(X::Item) -> bool + Clone + Send + 'a,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, bool, Option<bool>>,
+    {
+        let executor = executor.into_inner();
+
+        let ret = Find::new(
+            self.iterator.map(self.operation),
+            bool::clone,
+            FindMatch::Any,
+        )
+        .exec_with(executor);
+
+        E::map(ret, |x| x.is_some())
+    }
+}
+
+/* All */
+
+pub struct All<X, O> {
+    iterator: X,
+    operation: O,
+}
+
+impl<X, O> All<X, O> {
+    pub fn new(iterator: X, operation: O) -> Self {
+        Self {
+            iterator,
+            operation,
+        }
+    }
+}
+
+impl<'a, X, O> Driver<'a, bool, Option<bool>> for All<X, O>
+where
+    X: ParallelIterator<'a>,
+    O: Fn(X::Item) -> bool + Clone + Send + 'a,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, bool, Option<bool>>,
+    {
+        let executor = executor.into_inner();
+
+        let ret = Find::new(
+            self.iterator.map(self.operation),
+            |x: &bool| !x,
+            FindMatch::Any,
+        )
+        .exec_with(executor);
+
+        E::map(ret, |x| x.is_some())
+    }
+}
+
 /* FindConsumer */
 
 struct FindConsumer<O> {

@@ -26,7 +26,7 @@ impl<X, S, O> MapInit<X, S, O> {
 impl<'a, X, O, T, S, U> ParallelIterator<'a> for MapInit<X, S, O>
 where
     X: ParallelIterator<'a>,
-    O: Fn(&mut U, X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut U, X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
     S: Fn() -> U + Clone + Send + 'a,
 {
@@ -63,7 +63,7 @@ where
 impl<'a, X, O, T, S, U> IndexedParallelIterator<'a> for MapInit<X, S, O>
 where
     X: IndexedParallelIterator<'a>,
-    O: Fn(&mut U, X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut U, X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
     S: Fn() -> U + Clone + Send + 'a,
 {
@@ -106,7 +106,7 @@ struct MapInitCallback<CB, S, O> {
 impl<'a, I, S, O, T, U, CB> ProducerCallback<'a, I> for MapInitCallback<CB, S, O>
 where
     CB: ProducerCallback<'a, T>,
-    O: Fn(&mut U, I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut U, I) -> T + Clone + Send + 'a,
     T: Send,
     S: Fn() -> U + Clone + Send + 'a,
 {
@@ -129,7 +129,7 @@ where
 impl<'a, I, S, O, T, U, CB> IndexedProducerCallback<'a, I> for MapInitCallback<CB, S, O>
 where
     CB: IndexedProducerCallback<'a, T>,
-    O: Fn(&mut U, I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut U, I) -> T + Clone + Send + 'a,
     T: Send,
     S: Fn() -> U + Clone + Send + 'a,
 {
@@ -160,7 +160,7 @@ struct MapInitProducer<P, S, O> {
 impl<P, S, O, T, U> Producer for MapInitProducer<P, S, O>
 where
     P: Producer,
-    O: Fn(&mut U, P::Item) -> T + Clone + Sync + Send,
+    O: Fn(&mut U, P::Item) -> T + Clone + Send,
     T: Send,
     S: Fn() -> U + Clone + Send,
 {
@@ -211,7 +211,7 @@ where
 impl<P, S, O, T, U> IndexedProducer for MapInitProducer<P, S, O>
 where
     P: IndexedProducer,
-    O: Fn(&mut U, P::Item) -> T + Clone + Sync + Send,
+    O: Fn(&mut U, P::Item) -> T + Clone + Send,
     T: Send,
     S: Fn() -> U + Clone + Send,
 {
@@ -294,7 +294,7 @@ impl<C, S, O> MapInitConsumer<C, S, O> {
 impl<I, T, C, S, U, O> Consumer<I> for MapInitConsumer<C, S, O>
 where
     C: Consumer<T>,
-    O: Fn(&mut U, I) -> T + Clone + Send + Sync,
+    O: Fn(&mut U, I) -> T + Clone + Send,
     T: Send,
     S: Fn() -> U + Clone + Send,
 {

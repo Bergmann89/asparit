@@ -15,7 +15,7 @@ use crate::{
         count::Count,
         filter::Filter,
         filter_map::FilterMap,
-        find::{Find, FindMap, FindMatch},
+        find::{All, Any, Find, FindMap, FindMatch},
         flatten::{FlatMapIter, FlattenIter},
         fold::{Fold, FoldWith},
         for_each::ForEach,
@@ -155,7 +155,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn for_each_with<O, T>(self, init: T, operation: O) -> Collect<MapWith<Self, T, O>, ()>
     where
-        O: Fn(&mut T, Self::Item) + Clone + Send + Sync + 'a,
+        O: Fn(&mut T, Self::Item) + Clone + Send + 'a,
         T: Clone + Send + 'a,
     {
         self.map_with(init, operation).collect()
@@ -189,8 +189,8 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn for_each_init<O, S, T>(self, init: S, operation: O) -> Collect<MapInit<Self, S, O>, ()>
     where
-        O: Fn(&mut T, Self::Item) + Clone + Sync + Send + 'a,
-        S: Fn() -> T + Clone + Sync + Send + 'a,
+        O: Fn(&mut T, Self::Item) + Clone + Send + 'a,
+        S: Fn() -> T + Clone + Send + 'a,
     {
         self.map_init(init, operation).collect()
     }
@@ -217,7 +217,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn try_for_each<O, T>(self, operation: O) -> TryForEach<Self, O>
     where
-        O: Fn(Self::Item) -> T + Clone + Sync + Send,
+        O: Fn(Self::Item) -> T + Clone + Send,
         T: Try<Ok = ()> + Send,
     {
         TryForEach::new(self, operation)
@@ -253,7 +253,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     fn try_for_each_with<O, S, T>(self, init: S, operation: O) -> TryForEachWith<Self, S, O>
     where
         S: Clone + Send + 'a,
-        O: Fn(&mut S, Self::Item) -> T + Clone + Sync + Send + 'a,
+        O: Fn(&mut S, Self::Item) -> T + Clone + Send + 'a,
         T: Try<Ok = ()> + Send + 'a,
     {
         TryForEachWith::new(self, init, operation)
@@ -290,8 +290,8 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn try_for_each_init<O, S, T, U>(self, init: S, operation: O) -> TryForEachInit<Self, S, O>
     where
-        O: Fn(&mut U, Self::Item) -> T + Clone + Sync + Send + 'a,
-        S: Fn() -> U + Clone + Send + Sync + 'a,
+        O: Fn(&mut U, Self::Item) -> T + Clone + Send + 'a,
+        S: Fn() -> U + Clone + Send + 'a,
         T: Try<Ok = ()> + Send + 'a,
     {
         TryForEachInit::new(self, init, operation)
@@ -328,7 +328,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn map<O, T>(self, operation: O) -> Map<Self, O>
     where
-        O: Fn(Self::Item) -> T + Sync + Send,
+        O: Fn(Self::Item) -> T + Clone + Send,
         T: Send,
     {
         Map::new(self, operation)
@@ -366,7 +366,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn map_with<O, T, S>(self, init: S, operation: O) -> MapWith<Self, S, O>
     where
-        O: Fn(&mut S, Self::Item) -> T + Clone + Sync + Send,
+        O: Fn(&mut S, Self::Item) -> T + Clone + Send,
         S: Send + Clone,
         T: Send,
     {
@@ -403,8 +403,8 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn map_init<O, T, S, U>(self, init: S, operation: O) -> MapInit<Self, S, O>
     where
-        O: Fn(&mut U, Self::Item) -> T + Sync + Send,
-        S: Fn() -> U + Sync + Send,
+        O: Fn(&mut U, Self::Item) -> T + Send,
+        S: Fn() -> U + Send,
         T: Send,
     {
         MapInit::new(self, init, operation)
@@ -707,7 +707,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// [associative]: https://en.wikipedia.org/wiki/Associative_property
     fn reduce_with<O>(self, operation: O) -> ReduceWith<Self, O>
     where
-        O: Fn(Self::Item, Self::Item) -> Self::Item + Sync + Send + 'a,
+        O: Fn(Self::Item, Self::Item) -> Self::Item + Clone + Send + 'a,
     {
         ReduceWith::new(self, operation)
     }
@@ -745,9 +745,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn try_reduce<S, O, T>(self, identity: S, operation: O) -> TryReduce<Self, S, O>
     where
-        S: Fn() -> T + Sync + Send,
-        O: Fn(T, T) -> Self::Item + Sync + Send,
         Self::Item: Try<Ok = T>,
+        S: Fn() -> T + Clone + Send + 'a,
+        O: Fn(T, T) -> Self::Item + Clone + Send + 'a,
     {
         TryReduce::new(self, identity, operation)
     }
@@ -790,7 +790,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     fn try_reduce_with<O, T>(self, operation: O) -> TryReduceWith<Self, O>
     where
         Self::Item: Try<Ok = T>,
-        O: Fn(T, T) -> Self::Item + Sync + Send + 'a,
+        O: Fn(T, T) -> Self::Item + Clone + Send + 'a,
     {
         TryReduceWith::new(self, operation)
     }
@@ -1450,6 +1450,52 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send,
     {
         FindMap::new(self, operation, FindMatch::Last)
+    }
+
+    /// Searches for **some** item in the parallel iterator that
+    /// matches the given operation, and if so returns true.  Once
+    /// a match is found, we'll attempt to stop process the rest
+    /// of the items.  Proving that there's no match, returning false,
+    /// does require visiting every item.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [0, 12, 3, 4, 0, 23, 0];
+    ///
+    /// let is_valid = a.par_iter().any(|&x| x > 10);
+    ///
+    /// assert!(is_valid);
+    /// ```
+    fn any<O>(self, operation: O) -> Any<Self, O>
+    where
+        O: Fn(Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Any::new(self, operation)
+    }
+
+    /// Tests that every item in the parallel iterator matches the given
+    /// operation, and if so returns true.  If a counter-example is found,
+    /// we'll attempt to stop processing more items, then return false.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [0, 12, 3, 4, 0, 23, 0];
+    ///
+    /// let is_valid = a.par_iter().all(|&x| x > 10);
+    ///
+    /// assert!(!is_valid);
+    /// ```
+    fn all<O>(self, operation: O) -> All<Self, O>
+    where
+        O: Fn(Self::Item) -> bool + Clone + Send + 'a,
+    {
+        All::new(self, operation)
     }
 
     /// Creates a fresh collection containing all the elements produced

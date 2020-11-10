@@ -19,7 +19,7 @@ impl<X, O> TryForEach<X, O> {
 impl<'a, X, O, T> Driver<'a, T> for TryForEach<X, O>
 where
     X: ParallelIterator<'a>,
-    O: Fn(X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(X::Item) -> T + Clone + Send + 'a,
     T: Try<Ok = ()> + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
@@ -64,7 +64,7 @@ impl<'a, X, S, O, T> Driver<'a, T> for TryForEachWith<X, S, O>
 where
     X: ParallelIterator<'a>,
     S: Clone + Send + 'a,
-    O: Fn(&mut S, X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(&mut S, X::Item) -> T + Clone + Send + 'a,
     T: Try<Ok = ()> + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
@@ -109,8 +109,8 @@ impl<X, S, O> TryForEachInit<X, S, O> {
 impl<'a, X, S, O, T, U> Driver<'a, T> for TryForEachInit<X, S, O>
 where
     X: ParallelIterator<'a>,
-    S: Fn() -> U + Clone + Send + Sync + 'a,
-    O: Fn(&mut U, X::Item) -> T + Clone + Sync + Send + 'a,
+    S: Fn() -> U + Clone + Send + 'a,
+    O: Fn(&mut U, X::Item) -> T + Clone + Send + 'a,
     T: Try<Ok = ()> + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result

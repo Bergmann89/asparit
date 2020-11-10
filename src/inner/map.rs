@@ -19,7 +19,7 @@ impl<X, O> Map<X, O> {
 impl<'a, X, O, T> ParallelIterator<'a> for Map<X, O>
 where
     X: ParallelIterator<'a>,
-    O: Fn(X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
 {
     type Item = O::Output;
@@ -54,7 +54,7 @@ where
 impl<'a, X, O, T> IndexedParallelIterator<'a> for Map<X, O>
 where
     X: IndexedParallelIterator<'a>,
-    O: Fn(X::Item) -> T + Clone + Sync + Send + 'a,
+    O: Fn(X::Item) -> T + Clone + Send + 'a,
     T: Send + 'a,
 {
     fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
@@ -94,7 +94,7 @@ struct MapCallback<CB, O> {
 impl<'a, I, O, T, CB> ProducerCallback<'a, I> for MapCallback<CB, O>
 where
     CB: ProducerCallback<'a, T>,
-    O: Fn(I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(I) -> T + Clone + Send + 'a,
     T: Send,
 {
     type Output = CB::Output;
@@ -115,7 +115,7 @@ where
 impl<'a, I, O, T, CB> IndexedProducerCallback<'a, I> for MapCallback<CB, O>
 where
     CB: IndexedProducerCallback<'a, T>,
-    O: Fn(I) -> T + Clone + Sync + Send + 'a,
+    O: Fn(I) -> T + Clone + Send + 'a,
     T: Send,
 {
     type Output = CB::Output;
@@ -143,7 +143,7 @@ struct MapProducer<P, O> {
 impl<P, O, T> Producer for MapProducer<P, O>
 where
     P: Producer,
-    O: Fn(P::Item) -> T + Clone + Sync + Send,
+    O: Fn(P::Item) -> T + Clone + Send,
     T: Send,
 {
     type Item = O::Output;
@@ -185,7 +185,7 @@ where
 impl<P, O, T> IndexedProducer for MapProducer<P, O>
 where
     P: IndexedProducer,
-    O: Fn(P::Item) -> T + Clone + Sync + Send,
+    O: Fn(P::Item) -> T + Clone + Send,
     T: Send,
 {
     type Item = O::Output;
@@ -255,7 +255,7 @@ impl<C, O> MapConsumer<C, O> {
 impl<I, T, C, O> Consumer<I> for MapConsumer<C, O>
 where
     C: Consumer<O::Output>,
-    O: Fn(I) -> T + Clone + Send + Sync,
+    O: Fn(I) -> T + Clone + Send,
     T: Send,
 {
     type Folder = MapFolder<C::Folder, O>;
