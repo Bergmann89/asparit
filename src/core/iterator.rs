@@ -25,6 +25,7 @@ use crate::{
         map_with::MapWith,
         max::{Max, MaxBy, MaxByKey},
         min::{Min, MinBy, MinByKey},
+        panic_fuse::PanicFuse,
         product::Product,
         reduce::{Reduce, ReduceWith},
         sum::Sum,
@@ -1527,6 +1528,40 @@ pub trait ParallelIterator<'a>: Sized + Send {
         T: Send + 'a,
     {
         WhileSome::new(self)
+    }
+
+    /// Wraps an iterator with a fuse in case of panics, to halt all threads
+    /// as soon as possible.
+    ///
+    /// Panics within parallel iterators are always propagated to the caller,
+    /// but they don't always halt the rest of the iterator right away, due to
+    /// the internal semantics of [`join`]. This adaptor makes a greater effort
+    /// to stop processing other items sooner, with the cost of additional
+    /// synchronization overhead, which may also inhibit some optimizations.
+    ///
+    /// [`join`]: ../fn.join.html#panics
+    ///
+    /// # Examples
+    ///
+    /// If this code didn't use `panic_fuse()`, it would continue processing
+    /// many more items in other threads (with long sleep delays) before the
+    /// panic is finally propagated.
+    ///
+    /// ```should_panic
+    /// use rayon::prelude::*;
+    /// use std::{thread, time};
+    ///
+    /// (0..1_000_000)
+    ///     .into_par_iter()
+    ///     .panic_fuse()
+    ///     .for_each(|i| {
+    ///         // simulate some work
+    ///         thread::sleep(time::Duration::from_secs(1));
+    ///         assert!(i > 0); // oops!
+    ///     });
+    /// ```
+    fn panic_fuse(self) -> PanicFuse<Self> {
+        PanicFuse::new(self)
     }
 
     /// Creates a fresh collection containing all the elements produced

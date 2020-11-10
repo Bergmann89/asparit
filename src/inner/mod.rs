@@ -16,6 +16,7 @@ pub mod map_with;
 pub mod max;
 pub mod min;
 pub mod noop;
+pub mod panic_fuse;
 pub mod product;
 pub mod reduce;
 pub mod sum;
@@ -54,6 +55,7 @@ mod tests {
             .chain(b)
             .update(|x| x.push(0))
             .flatten_iter()
+            .panic_fuse()
             .map(Some)
             .while_some()
             .map_init(
