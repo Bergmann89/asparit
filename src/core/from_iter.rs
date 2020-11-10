@@ -68,7 +68,7 @@ impl FromParallelIterator<()> for () {
         E: Executor<'a, Self>,
         X: IntoParallelIterator<'a, Item = ()>,
     {
-        use crate::{inner::noop::NoOpConsumer, ParallelIterator};
+        use crate::{iter::noop::NoOpConsumer, ParallelIterator};
 
         iterator.into_par_iter().drive(executor, NoOpConsumer)
     }

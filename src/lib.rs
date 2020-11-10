@@ -1,6 +1,6 @@
 mod core;
 mod executor;
-mod inner;
+mod iter;
 mod misc;
 mod std;
 

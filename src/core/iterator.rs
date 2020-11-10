@@ -7,7 +7,7 @@ use super::{
 };
 
 use crate::{
-    inner::{
+    iter::{
         chain::Chain,
         cloned::Cloned,
         collect::Collect,
