@@ -5,6 +5,7 @@ pub mod copied;
 pub mod count;
 pub mod filter;
 pub mod filter_map;
+pub mod find;
 pub mod flatten;
 pub mod fold;
 pub mod for_each;
@@ -66,6 +67,7 @@ mod tests {
                     Ok(())
                 },
             )
+            // .find_any(|x| x.0 == 5)
             .exec()
             .await;
 

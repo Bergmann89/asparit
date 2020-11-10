@@ -15,6 +15,7 @@ use crate::{
         count::Count,
         filter::Filter,
         filter_map::FilterMap,
+        find::{Find, FindMatch},
         flatten::{FlatMapIter, FlattenIter},
         fold::{Fold, FoldWith},
         for_each::ForEach,
@@ -1267,6 +1268,95 @@ pub trait ParallelIterator<'a>: Sized + Send {
         C: IntoParallelIterator<'a, Item = Self::Item>,
     {
         Chain::new(self, chain.into_par_iter())
+    }
+
+    /// Searches for **some** item in the parallel iterator that
+    /// matches the given operation and returns it. This operation
+    /// is similar to [`find` on sequential iterators][find] but
+    /// the item returned may not be the **first** one in the parallel
+    /// sequence which matches, since we search the entire sequence in parallel.
+    ///
+    /// Once a match is found, we will attempt to stop processing
+    /// the rest of the items in the iterator as soon as possible
+    /// (just as `find` stops iterating once a match is found).
+    ///
+    /// [find]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.find
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// assert_eq!(a.par_iter().find_any(|&&x| x == 3), Some(&3));
+    ///
+    /// assert_eq!(a.par_iter().find_any(|&&x| x == 100), None);
+    /// ```
+    fn find_any<O>(self, operation: O) -> Find<Self, O>
+    where
+        O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Find::new(self, operation, FindMatch::Any)
+    }
+
+    /// Searches for the sequentially **first** item in the parallel iterator
+    /// that matches the given operation and returns it.
+    ///
+    /// Once a match is found, all attempts to the right of the match
+    /// will be stopped, while attempts to the left must continue in case
+    /// an earlier match is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "first" may be nebulous.  If you
+    /// just want the first match that discovered anywhere in the iterator,
+    /// `find_any` is a better choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// assert_eq!(a.par_iter().find_first(|&&x| x == 3), Some(&3));
+    ///
+    /// assert_eq!(a.par_iter().find_first(|&&x| x == 100), None);
+    /// ```
+    fn find_first<O>(self, operation: O) -> Find<Self, O>
+    where
+        O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Find::new(self, operation, FindMatch::First)
+    }
+
+    /// Searches for the sequentially **last** item in the parallel iterator
+    /// that matches the given operation and returns it.
+    ///
+    /// Once a match is found, all attempts to the left of the match
+    /// will be stopped, while attempts to the right must continue in case
+    /// a later match is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "last" may be nebulous.  When the
+    /// order doesn't actually matter to you, `find_any` is a better choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// assert_eq!(a.par_iter().find_last(|&&x| x == 3), Some(&3));
+    ///
+    /// assert_eq!(a.par_iter().find_last(|&&x| x == 100), None);
+    /// ```
+    fn find_last<O>(self, operation: O) -> Find<Self, O>
+    where
+        O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Find::new(self, operation, FindMatch::Last)
     }
 
     /// Creates a fresh collection containing all the elements produced
