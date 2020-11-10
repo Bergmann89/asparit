@@ -5,19 +5,19 @@ use std::sync::{
 
 use crate::{Consumer, Driver, Executor, Folder, ParallelIterator, Reducer};
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum FindMatch {
+    Any,
+    First,
+    Last,
+}
+
 /* Find */
 
 pub struct Find<X, O> {
     iterator: X,
     operation: O,
     find_match: FindMatch,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum FindMatch {
-    Any,
-    First,
-    Last,
 }
 
 impl<X, O> Find<X, O> {
@@ -48,6 +48,43 @@ where
         };
 
         self.iterator.drive(executor, consumer)
+    }
+}
+
+/* FindMap */
+
+pub struct FindMap<X, O> {
+    iterator: X,
+    operation: O,
+    find_match: FindMatch,
+}
+
+impl<X, O> FindMap<X, O> {
+    pub fn new(iterator: X, operation: O, find_match: FindMatch) -> Self {
+        Self {
+            iterator,
+            operation,
+            find_match,
+        }
+    }
+}
+
+impl<'a, X, O, T> Driver<'a, Option<T>> for FindMap<X, O>
+where
+    X: ParallelIterator<'a>,
+    O: Fn(X::Item) -> Option<T> + Clone + Send + 'a,
+    T: Send + 'a,
+{
+    fn exec_with<E>(self, executor: E) -> E::Result
+    where
+        E: Executor<'a, Option<T>>,
+    {
+        Find::new(
+            self.iterator.filter_map(self.operation),
+            |_: &T| true,
+            self.find_match,
+        )
+        .exec_with(executor)
     }
 }
 

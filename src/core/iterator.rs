@@ -15,7 +15,7 @@ use crate::{
         count::Count,
         filter::Filter,
         filter_map::FilterMap,
-        find::{Find, FindMatch},
+        find::{Find, FindMap, FindMatch},
         flatten::{FlatMapIter, FlattenIter},
         fold::{Fold, FoldWith},
         for_each::ForEach,
@@ -1357,6 +1357,99 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(&Self::Item) -> bool + Clone + Send + 'a,
     {
         Find::new(self, operation, FindMatch::Last)
+    }
+
+    /// Applies the given operation to the items in the parallel iterator
+    /// and returns **any** non-None result of the map operation.
+    ///
+    /// Once a non-None value is produced from the map operation, we will
+    /// attempt to stop processing the rest of the items in the iterator
+    /// as soon as possible.
+    ///
+    /// Note that this method only returns **some** item in the parallel
+    /// iterator that is not None from the map operation. The item returned
+    /// may not be the **first** non-None value produced in the parallel
+    /// sequence, since the entire sequence is mapped over in parallel.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let c = ["lol", "NaN", "5", "5"];
+    ///
+    /// let found_number = c.par_iter().find_map_any(|s| s.parse().ok());
+    ///
+    /// assert_eq!(found_number, Some(5));
+    /// ```
+    fn find_map_any<O, T>(self, operation: O) -> FindMap<Self, O>
+    where
+        O: Fn(Self::Item) -> Option<T> + Clone + Send + 'a,
+        T: Send,
+    {
+        FindMap::new(self, operation, FindMatch::Any)
+    }
+
+    /// Applies the given operation to the items in the parallel iterator and
+    /// returns the sequentially **first** non-None result of the map operation.
+    ///
+    /// Once a non-None value is produced from the map operation, all attempts
+    /// to the right of the match will be stopped, while attempts to the left
+    /// must continue in case an earlier match is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "first" may be nebulous. If you
+    /// just want the first non-None value discovered anywhere in the iterator,
+    /// `find_map_any` is a better choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let c = ["lol", "NaN", "2", "5"];
+    ///
+    /// let first_number = c.par_iter().find_map_first(|s| s.parse().ok());
+    ///
+    /// assert_eq!(first_number, Some(2));
+    /// ```
+    fn find_map_first<O, T>(self, operation: O) -> FindMap<Self, O>
+    where
+        O: Fn(Self::Item) -> Option<T> + Clone + Send + 'a,
+        T: Send,
+    {
+        FindMap::new(self, operation, FindMatch::First)
+    }
+
+    /// Applies the given operation to the items in the parallel iterator and
+    /// returns the sequentially **last** non-None result of the map operation.
+    ///
+    /// Once a non-None value is produced from the map operation, all attempts
+    /// to the left of the match will be stopped, while attempts to the right
+    /// must continue in case a later match is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "first" may be nebulous. If you
+    /// just want the first non-None value discovered anywhere in the iterator,
+    /// `find_map_any` is a better choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let c = ["lol", "NaN", "2", "5"];
+    ///
+    /// let last_number = c.par_iter().find_map_last(|s| s.parse().ok());
+    ///
+    /// assert_eq!(last_number, Some(5));
+    /// ```
+    fn find_map_last<O, T>(self, operation: O) -> FindMap<Self, O>
+    where
+        O: Fn(Self::Item) -> Option<T> + Clone + Send + 'a,
+        T: Send,
+    {
+        FindMap::new(self, operation, FindMatch::Last)
     }
 
     /// Creates a fresh collection containing all the elements produced
