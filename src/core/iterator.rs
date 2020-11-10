@@ -32,6 +32,7 @@ use crate::{
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::{TryReduce, TryReduceWith},
         update::Update,
+        while_some::WhileSome,
     },
     misc::Try,
 };
@@ -1496,6 +1497,36 @@ pub trait ParallelIterator<'a>: Sized + Send {
         O: Fn(Self::Item) -> bool + Clone + Send + 'a,
     {
         All::new(self, operation)
+    }
+
+    /// Creates an iterator over the `Some` items of this iterator, halting
+    /// as soon as any `None` is found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    ///
+    /// let counter = AtomicUsize::new(0);
+    /// let value = (0_i32..2048)
+    ///     .into_par_iter()
+    ///     .map(|x| {
+    ///              counter.fetch_add(1, Ordering::SeqCst);
+    ///              if x < 1024 { Some(x) } else { None }
+    ///          })
+    ///     .while_some()
+    ///     .max();
+    ///
+    /// assert!(value = Some(1023));
+    /// assert!(counter.load(Ordering::SeqCst) < 2048); // should not have visited every single one
+    /// ```
+    fn while_some<T>(self) -> WhileSome<Self>
+    where
+        Self: ParallelIterator<'a, Item = Option<T>>,
+        T: Send + 'a,
+    {
+        WhileSome::new(self)
     }
 
     /// Creates a fresh collection containing all the elements produced

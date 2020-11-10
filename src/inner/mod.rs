@@ -23,6 +23,7 @@ pub mod try_fold;
 pub mod try_for_each;
 pub mod try_reduce;
 pub mod update;
+pub mod while_some;
 
 #[cfg(test)]
 mod tests {
@@ -53,9 +54,11 @@ mod tests {
             .chain(b)
             .update(|x| x.push(0))
             .flatten_iter()
+            .map(Some)
+            .while_some()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
-                |init, item| (item, *init),
+                |init, item| Some((item, *init)),
             )
             .try_fold_with(String::new(), |s, item| -> Result<String, ()> {
                 Ok(format!("{} + {:?}", s, item))
