@@ -32,6 +32,7 @@ use crate::{
         try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::{TryReduce, TryReduceWith},
+        unzip::Unzip,
         update::Update,
         while_some::WhileSome,
     },
@@ -1590,9 +1591,47 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn collect<T>(self) -> Collect<Self, T>
     where
-        T: FromParallelIterator<Self::Item>,
+        T: FromParallelIterator<'a, Self::Item>,
     {
         Collect::new(self)
+    }
+
+    /// Unzips the items of a parallel iterator into a pair of arbitrary
+    /// `ParallelExtend` containers.
+    ///
+    /// You may prefer to use `unzip_into_vecs()`, which allocates more
+    /// efficiently with precise knowledge of how many elements the
+    /// iterator contains, and even allows you to reuse existing
+    /// vectors' backing stores rather than allocating fresh vectors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [(0, 1), (1, 2), (2, 3), (3, 4)];
+    ///
+    /// let (left, right): (Vec<_>, Vec<_>) = a.par_iter().cloned().unzip();
+    ///
+    /// assert_eq!(left, [0, 1, 2, 3]);
+    /// assert_eq!(right, [1, 2, 3, 4]);
+    /// ```
+    ///
+    /// Nested pairs can be unzipped too.
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let (values, squares, cubes): (Vec<_>, Vec<_>, Vec<_>) = (0..4).into_par_iter()
+    ///     .map(|i| (i, i * i, i * i * i))
+    ///     .unzip();
+    ///
+    /// assert_eq!(values, [0, 1, 2, 3]);
+    /// assert_eq!(squares, [0, 1, 4, 9]);
+    /// assert_eq!(cubes, [0, 1, 8, 27]);
+    /// ```
+    fn unzip(self) -> Unzip<Self> {
+        Unzip::new(self)
     }
 }
 

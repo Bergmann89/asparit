@@ -23,6 +23,7 @@ pub mod sum;
 pub mod try_fold;
 pub mod try_for_each;
 pub mod try_reduce;
+pub mod unzip;
 pub mod update;
 pub mod while_some;
 
@@ -49,7 +50,7 @@ mod tests {
             vec![11usize, 12usize],
         ];
 
-        let x = a
+        let (x, y, z): (Vec<_>, Vec<_>, Vec<_>) = a
             .par_iter()
             .cloned()
             .chain(b)
@@ -60,22 +61,19 @@ mod tests {
             .while_some()
             .map_init(
                 move || i.fetch_add(1, Ordering::Relaxed),
-                |init, item| Some((item, *init)),
+                |init, item| (*init, item),
             )
-            .try_fold_with(String::new(), |s, item| -> Result<String, ()> {
-                Ok(format!("{} + {:?}", s, item))
-            })
-            .try_for_each_init(
-                move || j.fetch_add(1, Ordering::Relaxed),
-                |init, item| -> Result<(), ()> {
-                    println!("{:?} - {:?}", init, item);
-                    Ok(())
-                },
+            .map_init(
+                move || j.fetch_add(2, Ordering::Relaxed),
+                |init, (init2, item)| (*init, init2, item),
             )
+            .unzip()
             .exec()
             .await;
 
         dbg!(&x);
+        dbg!(&y);
+        dbg!(&z);
     }
 
     #[tokio::test]

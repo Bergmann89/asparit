@@ -55,10 +55,10 @@ where
 
     fn map<O>(
         inner: <Self::Inner as Executor<'a, T2, T3, ()>>::Result,
-        operation: O,
+        mut operation: O,
     ) -> Self::Result
     where
-        O: Fn(T2) -> T1,
+        O: FnMut(T2) -> T1,
     {
         operation(inner)
     }

@@ -96,10 +96,10 @@ where
 
     fn map<O>(
         inner: <Self::Inner as Executor<'a, T2, T3, ()>>::Result,
-        operation: O,
+        mut operation: O,
     ) -> Self::Result
     where
-        O: Fn(T2) -> T1 + Send + 'a,
+        O: FnMut(T2) -> T1 + Send + 'a,
     {
         async move {
             let value = inner.await;

@@ -37,7 +37,7 @@ where
         operation: O,
     ) -> Self::Result
     where
-        O: Fn(T2) -> T1 + Send + 'a;
+        O: FnMut(T2) -> T1 + Send + 'a;
 }
 
 pub struct ExecutorCallback<E, C> {

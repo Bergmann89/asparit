@@ -1,3 +1,4 @@
+use std::collections::LinkedList;
 use std::iter::FusedIterator;
 use std::mem::replace;
 use std::ops::{Range, RangeBounds};
@@ -6,9 +7,9 @@ use std::slice::{from_raw_parts_mut, IterMut};
 use std::sync::Arc;
 
 use crate::{
-    misc::simplify_range, Consumer, Executor, ExecutorCallback, IndexedParallelIterator,
+    misc::simplify_range, Consumer, Executor, ExecutorCallback, Folder, IndexedParallelIterator,
     IndexedProducer, IndexedProducerCallback, IntoParallelIterator, ParallelDrainRange,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer,
 };
 
 /// Parallel iterator that moves out of a vector.
@@ -455,3 +456,126 @@ impl<'a, T, C> ExactSizeIterator for SliceIter<'a, T, C> {
 }
 
 impl<'a, T, C> FusedIterator for SliceIter<'a, T, C> {}
+
+/* ParallelExtend */
+
+impl<'a, I> ParallelExtend<'a, I, VecExtendResult<I>> for Vec<I>
+where
+    I: Send + 'a,
+{
+    type Consumer = VecConsumer<I>;
+
+    fn into_consumer(self) -> Self::Consumer {
+        VecConsumer { vec: Some(self) }
+    }
+
+    fn map_result(inner: VecExtendResult<I>) -> Self {
+        let mut vec = inner.vec.unwrap();
+
+        for mut items in inner.items {
+            vec.append(&mut items);
+        }
+
+        vec
+    }
+}
+
+/* VecConsumer */
+
+pub struct VecConsumer<T> {
+    vec: Option<Vec<T>>,
+}
+
+impl<T> Consumer<T> for VecConsumer<T>
+where
+    T: Send,
+{
+    type Folder = VecFolder<T>;
+    type Reducer = VecReducer;
+    type Result = VecExtendResult<T>;
+
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        let left = VecConsumer { vec: self.vec };
+        let right = VecConsumer { vec: None };
+        let reducer = VecReducer;
+
+        (left, right, reducer)
+    }
+
+    fn split_at(self, _index: usize) -> (Self, Self, Self::Reducer) {
+        self.split()
+    }
+
+    fn into_folder(self) -> Self::Folder {
+        VecFolder {
+            vec: self.vec,
+            items: Vec::new(),
+        }
+    }
+
+    fn is_full(&self) -> bool {
+        false
+    }
+}
+
+/* VecFolder */
+
+pub struct VecFolder<T> {
+    vec: Option<Vec<T>>,
+    items: Vec<T>,
+}
+
+impl<T> Folder<T> for VecFolder<T> {
+    type Result = VecExtendResult<T>;
+
+    fn consume(mut self, item: T) -> Self {
+        self.items.push(item);
+
+        self
+    }
+
+    fn consume_iter<X>(mut self, iter: X) -> Self
+    where
+        X: IntoIterator<Item = T>,
+    {
+        self.items.extend(iter);
+
+        self
+    }
+
+    fn complete(self) -> Self::Result {
+        let mut items = LinkedList::new();
+        items.push_back(self.items);
+
+        VecExtendResult {
+            vec: self.vec,
+            items,
+        }
+    }
+
+    fn is_full(&self) -> bool {
+        false
+    }
+}
+
+/* VecReducer */
+
+pub struct VecReducer;
+
+impl<T> Reducer<VecExtendResult<T>> for VecReducer {
+    fn reduce(self, left: VecExtendResult<T>, mut right: VecExtendResult<T>) -> VecExtendResult<T> {
+        let mut items = left.items;
+        items.append(&mut right.items);
+
+        let vec = left.vec.or(right.vec);
+
+        VecExtendResult { vec, items }
+    }
+}
+
+/* VecExtendResult */
+
+pub struct VecExtendResult<T> {
+    vec: Option<Vec<T>>,
+    items: LinkedList<Vec<T>>,
+}

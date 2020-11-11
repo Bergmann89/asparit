@@ -36,9 +36,9 @@ use super::{Executor, IntoParallelIterator};
 /// let bh: BlackHole = (0i32..1000).into_par_iter().collect();
 /// assert_eq!(bh.mass, 4000);
 /// ```
-pub trait FromParallelIterator<T>: Send + Sized
+pub trait FromParallelIterator<'a, T>: Send + Sized
 where
-    T: Send,
+    T: Send + 'a,
 {
     /// Creates an instance of the collection from the parallel iterator `iterator`.
     ///
@@ -55,15 +55,15 @@ where
     /// [`iterator.fold`]: trait.ParallelIterator.html#method.fold
     /// [`iterator.fold_with`]: trait.ParallelIterator.html#method.fold_with
     /// [`iterator.for_each`]: trait.ParallelIterator.html#method.for_each
-    fn from_par_iter<'a, E, X>(executor: E, iterator: X) -> E::Result
+    fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
     where
         E: Executor<'a, Self>,
         X: IntoParallelIterator<'a, Item = T>,
         T: 'a;
 }
 
-impl FromParallelIterator<()> for () {
-    fn from_par_iter<'a, E, X>(executor: E, iterator: X) -> E::Result
+impl<'a> FromParallelIterator<'a, ()> for () {
+    fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
     where
         E: Executor<'a, Self>,
         X: IntoParallelIterator<'a, Item = ()>,
