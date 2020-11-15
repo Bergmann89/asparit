@@ -30,6 +30,7 @@ use crate::{
         partition::{Partition, PartitionMap},
         product::Product,
         reduce::{Reduce, ReduceWith},
+        splits::Splits,
         sum::Sum,
         try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
@@ -1726,6 +1727,25 @@ pub trait ParallelIterator<'a>: Sized + Send {
         Self::Item: Clone,
     {
         Intersperse::new(self, item)
+    }
+
+    /// Sets the number of splits that are processed in parallel.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let min = (0..1_000_000)
+    ///     .into_par_iter()
+    ///     .with_splits(8)
+    ///     .for_each(|| println!("Thread ID: {:?}", std::thread::current().id))
+    ///     .exec();
+    ///
+    /// assert!(min >= 1234);
+    /// ```
+    fn with_splits(self, splits: usize) -> Splits<Self> {
+        Splits::new(self, splits)
     }
 }
 

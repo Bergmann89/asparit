@@ -21,6 +21,7 @@ pub mod panic_fuse;
 pub mod partition;
 pub mod product;
 pub mod reduce;
+pub mod splits;
 pub mod sum;
 pub mod try_fold;
 pub mod try_for_each;
@@ -33,7 +34,7 @@ pub mod while_some;
 mod tests {
     use crate::*;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
         use ::std::sync::atomic::{AtomicUsize, Ordering};
         use ::std::sync::Arc;
@@ -70,6 +71,14 @@ mod tests {
                 move || j.fetch_add(2, Ordering::Relaxed),
                 |init, (init2, item)| (*init, init2, item),
             )
+            .with_splits(4)
+            .inspect(|x| {
+                println!(
+                    "Thread ID = {:?}; Item = {:?}",
+                    ::std::thread::current().id(),
+                    x
+                )
+            })
             .partition_map(|(i, j, k)| match j % 3 {
                 0 => (Some(i), None, None),
                 1 => (None, Some(j), None),

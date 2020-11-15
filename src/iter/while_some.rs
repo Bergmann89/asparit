@@ -142,7 +142,10 @@ where
     type IntoIter = WhileSomeIter<P::IntoIter>;
 
     fn into_iter(self) -> Self::IntoIter {
-        unimplemented!()
+        WhileSomeIter {
+            base: self.base.into_iter(),
+            is_full: self.is_full,
+        }
     }
 
     fn split(self) -> (Self, Option<Self>) {
