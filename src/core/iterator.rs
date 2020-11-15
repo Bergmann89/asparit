@@ -26,6 +26,7 @@ use crate::{
         max::{Max, MaxBy, MaxByKey},
         min::{Min, MinBy, MinByKey},
         panic_fuse::PanicFuse,
+        partition::{Partition, PartitionMap},
         product::Product,
         reduce::{Reduce, ReduceWith},
         sum::Sum,
@@ -1632,6 +1633,79 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn unzip(self) -> Unzip<Self> {
         Unzip::new(self)
+    }
+
+    /// Partitions the items of a parallel iterator into a pair of arbitrary
+    /// `ParallelExtend` containers.  Items for which the `operation` returns
+    /// true go into the first container, and the rest go into the second.
+    ///
+    /// Note: unlike the standard `Iterator::partition`, this allows distinct
+    /// collection types for the left and right items.  This is more flexible,
+    /// but may require new type annotations when converting sequential code
+    /// that used type inferrence assuming the two were the same.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let (left, right): (Vec<_>, Vec<_>) = (0..8).into_par_iter().partition(|x| x % 2 == 0);
+    ///
+    /// assert_eq!(left, [0, 2, 4, 6]);
+    /// assert_eq!(right, [1, 3, 5, 7]);
+    /// ```
+    fn partition<O>(self, operation: O) -> Partition<Self, O>
+    where
+        O: Fn(&Self::Item) -> bool + Sync + Send,
+    {
+        Partition::new(self, operation)
+    }
+
+    /// Partitions and maps the items of a parallel iterator into a pair of
+    /// arbitrary `ParallelExtend` containers.  `Either::Left` items go into
+    /// the first container, and `Either::Right` items go into the second.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use rayon::iter::Either;
+    ///
+    /// let (left, right): (Vec<_>, Vec<_>) = (0..8).into_par_iter()
+    ///     .partition_map(|x| {
+    ///         if x % 2 == 0 {
+    ///             Either::Left(x * 4)
+    ///         } else {
+    ///             Either::Right(x * 3)
+    ///         }
+    ///     });
+    ///
+    /// assert_eq!(left, [0, 8, 16, 24]);
+    /// assert_eq!(right, [3, 9, 15, 21]);
+    /// ```
+    ///
+    /// Nested `Either` enums can be split as well.
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use rayon::iter::Either::*;
+    ///
+    /// let ((fizzbuzz, fizz), (buzz, other)): ((Vec<_>, Vec<_>), (Vec<_>, Vec<_>)) = (1..20)
+    ///     .into_par_iter()
+    ///     .partition_map(|x| match (x % 3, x % 5) {
+    ///         (0, 0) => Left(Left(x)),
+    ///         (0, _) => Left(Right(x)),
+    ///         (_, 0) => Right(Left(x)),
+    ///         (_, _) => Right(Right(x)),
+    ///     });
+    ///
+    /// assert_eq!(fizzbuzz, [15]);
+    /// assert_eq!(fizz, [3, 6, 9, 12, 18]);
+    /// assert_eq!(buzz, [5, 10]);
+    /// assert_eq!(other, [1, 2, 4, 7, 8, 11, 13, 14, 16, 17, 19]);
+    /// ```
+    fn partition_map<O>(self, operation: O) -> PartitionMap<Self, O> {
+        PartitionMap::new(self, operation)
     }
 }
 

@@ -17,6 +17,7 @@ pub mod max;
 pub mod min;
 pub mod noop;
 pub mod panic_fuse;
+pub mod partition;
 pub mod product;
 pub mod reduce;
 pub mod sum;
@@ -67,7 +68,12 @@ mod tests {
                 move || j.fetch_add(2, Ordering::Relaxed),
                 |init, (init2, item)| (*init, init2, item),
             )
-            .unzip()
+            .partition_map(|(i, j, k)| match j % 3 {
+                0 => (Some(i), None, None),
+                1 => (None, Some(j), None),
+                2 => (None, None, Some(k)),
+                _ => unreachable!(),
+            })
             .exec()
             .await;
 
