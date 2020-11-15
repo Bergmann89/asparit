@@ -20,6 +20,7 @@ use crate::{
         fold::{Fold, FoldWith},
         for_each::ForEach,
         inspect::Inspect,
+        intersperse::Intersperse,
         map::Map,
         map_init::MapInit,
         map_with::MapWith,
@@ -1706,6 +1707,25 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     fn partition_map<O>(self, operation: O) -> PartitionMap<Self, O> {
         PartitionMap::new(self, operation)
+    }
+
+    /// Intersperses clones of an element between items of this iterator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let x = vec![1, 2, 3];
+    /// let r: Vec<_> = x.into_par_iter().intersperse(-1).collect();
+    ///
+    /// assert_eq!(r, vec![1, -1, 2, -1, 3]);
+    /// ```
+    fn intersperse(self, item: Self::Item) -> Intersperse<Self, Self::Item>
+    where
+        Self::Item: Clone,
+    {
+        Intersperse::new(self, item)
     }
 }
 

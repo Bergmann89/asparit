@@ -10,6 +10,7 @@ pub mod flatten;
 pub mod fold;
 pub mod for_each;
 pub mod inspect;
+pub mod intersperse;
 pub mod map;
 pub mod map_init;
 pub mod map_with;
@@ -57,6 +58,7 @@ mod tests {
             .chain(b)
             .update(|x| x.push(0))
             .flatten_iter()
+            .intersperse(100)
             .panic_fuse()
             .map(Some)
             .while_some()

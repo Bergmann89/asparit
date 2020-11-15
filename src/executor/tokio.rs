@@ -213,7 +213,7 @@ impl Splitter {
 
     #[inline]
     fn try_split(&mut self) -> bool {
-        if self.splits > 0 {
+        if self.splits > 1 {
             self.splits /= 2;
 
             true
