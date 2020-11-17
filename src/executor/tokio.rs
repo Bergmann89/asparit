@@ -42,7 +42,8 @@ where
         C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
         R: Reducer<T1> + Send + 'a,
     {
-        let splits = producer.splits().unwrap_or(self.splits);
+        let setup = producer.setup().merge(consumer.setup());
+        let splits = setup.splits.unwrap_or(self.splits);
         let splitter = Splitter::new(splits);
 
         exec(splitter, producer, consumer)
@@ -54,13 +55,9 @@ where
         C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
         R: Reducer<T1> + Send + 'a,
     {
-        let splits = producer.splits().unwrap_or(self.splits);
-        let splitter = IndexedSplitter::new(
-            splits,
-            producer.len(),
-            producer.min_len(),
-            producer.max_len(),
-        );
+        let setup = producer.setup().merge(consumer.setup());
+        let splits = setup.splits.unwrap_or(self.splits);
+        let splitter = IndexedSplitter::new(splits, producer.len(), setup.min_len, setup.max_len);
 
         exec_indexed(splitter, producer, consumer)
     }

@@ -1,9 +1,8 @@
-use std::cmp::{max, min};
 use std::iter::{DoubleEndedIterator, ExactSizeIterator, Iterator};
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* Chain */
@@ -215,6 +214,26 @@ struct ChainProducer<P1, P2> {
     producer_2: Option<P2>,
 }
 
+impl<P1, P2> WithSetup for ChainProducer<P1, P2>
+where
+    P1: WithSetup,
+    P2: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        let mut ret = Setup::default();
+
+        if let Some(p) = &self.producer_1 {
+            ret = ret.merge(p.setup());
+        }
+
+        if let Some(p) = &self.producer_2 {
+            ret = ret.merge(p.setup());
+        }
+
+        ret
+    }
+}
+
 impl<'a, P1, P2, T> Producer for ChainProducer<P1, P2>
 where
     P1: Producer<Item = T>,
@@ -273,17 +292,6 @@ where
                 (left, right)
             }
             (None, None) => unreachable!(),
-        }
-    }
-
-    fn splits(&self) -> Option<usize> {
-        let splits_1 = self.producer_1.as_ref().and_then(|p| p.splits());
-        let splits_2 = self.producer_2.as_ref().and_then(|p| p.splits());
-
-        match (splits_1, splits_2) {
-            (Some(splits), _) => Some(splits),
-            (None, Some(splits)) => Some(splits),
-            (None, None) => None,
         }
     }
 
@@ -410,31 +418,6 @@ where
             }
             (None, None) => unreachable!(),
         }
-    }
-
-    fn splits(&self) -> Option<usize> {
-        let splits_1 = self.producer_1.as_ref().and_then(|p| p.splits());
-        let splits_2 = self.producer_2.as_ref().and_then(|p| p.splits());
-
-        match (splits_1, splits_2) {
-            (Some(splits), _) => Some(splits),
-            (None, Some(splits)) => Some(splits),
-            (None, None) => None,
-        }
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        let min_1 = self.producer_1.as_ref().and_then(|p| p.min_len());
-        let min_2 = self.producer_2.as_ref().and_then(|p| p.min_len());
-
-        min(min_1, min_2)
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        let max_1 = self.producer_1.as_ref().and_then(|p| p.max_len());
-        let max_2 = self.producer_2.as_ref().and_then(|p| p.max_len());
-
-        max(max_1, max_2)
     }
 
     fn fold_with<F>(self, folder: F) -> F

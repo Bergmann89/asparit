@@ -6,7 +6,7 @@ use std::thread::panicking;
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* PanicFuse */
@@ -163,6 +163,15 @@ struct PanicFuseProducer<P> {
     fuse: Fuse,
 }
 
+impl<P> WithSetup for PanicFuseProducer<P>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<P> Producer for PanicFuseProducer<P>
 where
     P: Producer,
@@ -188,10 +197,6 @@ where
         let right = right.map(|base| Self { base, fuse });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, base: F) -> F
@@ -238,18 +243,6 @@ where
         };
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 
     fn fold_with<F>(self, base: F) -> F
@@ -311,6 +304,15 @@ impl<I> ExactSizeIterator for PanicFuseIter<I> where I: ExactSizeIterator {}
 struct PanicFuseConsumer<C> {
     base: C,
     fuse: Fuse,
+}
+
+impl<C> WithSetup for PanicFuseConsumer<C>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<C, T> Consumer<T> for PanicFuseConsumer<C>

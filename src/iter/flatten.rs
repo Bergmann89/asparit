@@ -1,6 +1,9 @@
 use std::iter::IntoIterator;
 
-use crate::{Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer};
+use crate::{
+    Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
+    WithSetup,
+};
 
 /* FlattenIter */
 
@@ -103,6 +106,15 @@ where
 struct FlatMapIterConsumer<C, O> {
     base: C,
     operation: O,
+}
+
+impl<C, O> WithSetup for FlatMapIterConsumer<C, O>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<'a, C, O, T, SI> Consumer<T> for FlatMapIterConsumer<C, O>
@@ -233,6 +245,15 @@ struct FlatMapIterProducer<P, O> {
     operation: O,
 }
 
+impl<P, O> WithSetup for FlatMapIterProducer<P, O>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, P, O, T, SI> Producer for FlatMapIterProducer<P, O>
 where
     P: Producer<Item = T>,
@@ -260,10 +281,6 @@ where
         });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, folder: F) -> F

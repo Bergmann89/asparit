@@ -1,6 +1,6 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* MapWith */
@@ -155,6 +155,15 @@ struct MapWithProducer<P, S, O> {
     operation: O,
 }
 
+impl<P, S, O> WithSetup for MapWithProducer<P, S, O>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<P, S, O, T> Producer for MapWithProducer<P, S, O>
 where
     P: Producer,
@@ -224,20 +233,8 @@ where
         }
     }
 
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
     fn len(&self) -> usize {
         self.base.len()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
@@ -322,6 +319,15 @@ struct MapWithConsumer<C, S, O> {
     base: C,
     item: S,
     operation: O,
+}
+
+impl<C, S, O> WithSetup for MapWithConsumer<C, S, O>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<C, S, O> MapWithConsumer<C, S, O> {

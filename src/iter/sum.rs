@@ -1,7 +1,7 @@
 use std::iter::{empty, once};
 use std::marker::PhantomData;
 
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer, WithSetup};
 
 /* Sum */
 
@@ -38,6 +38,8 @@ where
 /* SumConsumer */
 
 pub struct SumConsumer<S>(PhantomData<S>);
+
+impl<S> WithSetup for SumConsumer<S> {}
 
 impl<S, I> Consumer<I> for SumConsumer<S>
 where

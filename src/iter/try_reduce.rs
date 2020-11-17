@@ -3,7 +3,9 @@ use std::sync::{
     Arc,
 };
 
-use crate::{core::Driver, misc::Try, Consumer, Executor, Folder, ParallelIterator, Reducer};
+use crate::{
+    core::Driver, misc::Try, Consumer, Executor, Folder, ParallelIterator, Reducer, WithSetup,
+};
 
 /* TryReduce */
 
@@ -110,6 +112,8 @@ struct TryReduceConsumer<S, O> {
     operation: O,
     is_full: Arc<AtomicBool>,
 }
+
+impl<S, O> WithSetup for TryReduceConsumer<S, O> {}
 
 impl<S, O> Clone for TryReduceConsumer<S, O>
 where

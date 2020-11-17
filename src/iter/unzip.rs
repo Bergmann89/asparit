@@ -1,4 +1,7 @@
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelExtend, ParallelIterator, Reducer};
+use crate::{
+    core::Driver, Consumer, Executor, Folder, ParallelExtend, ParallelIterator, Reducer, Setup,
+    WithSetup,
+};
 
 /* Unzip */
 
@@ -67,6 +70,21 @@ macro_rules! parallel_extend_tuple {
                 let UnzipResult(($($T,)+)) = inner;
 
                 UnzipExtend(($($E::map_result($T),)+))
+            }
+        }
+
+        #[allow(non_snake_case)]
+        impl<$($C,)+> WithSetup for UnzipConsumer<($($C,)+)>
+        where
+            $($C: WithSetup,)+
+        {
+            fn setup(&self) -> Setup {
+                let ($($C,)+) = &self.0;
+
+                let mut ret = Setup::default();
+                $(ret = ret.merge($C.setup());)+
+
+                ret
             }
         }
 

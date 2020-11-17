@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::{
     misc::simplify_range, Consumer, Executor, ExecutorCallback, Folder, IndexedParallelIterator,
     IndexedProducer, IndexedProducerCallback, IntoParallelIterator, ParallelDrainRange,
-    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, WithSetup,
 };
 
 /// Parallel iterator that moves out of a vector.
@@ -135,6 +135,8 @@ impl<'a, T> VecProducer<'a, T> {
         }
     }
 }
+
+impl<'a, T> WithSetup for VecProducer<'a, T> {}
 
 impl<'a, T> Drop for VecProducer<'a, T> {
     fn drop(&mut self) {
@@ -331,6 +333,8 @@ struct DrainProducer<'a, T> {
     slice: &'a mut [T],
 }
 
+impl<'a, T> WithSetup for DrainProducer<'a, T> {}
+
 impl<'a, T> Drop for DrainProducer<'a, T> {
     fn drop(&mut self) {
         unsafe {
@@ -485,6 +489,8 @@ where
 pub struct VecConsumer<T> {
     vec: Option<Vec<T>>,
 }
+
+impl<T> WithSetup for VecConsumer<T> {}
 
 impl<T> Consumer<T> for VecConsumer<T>
 where

@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use crate::{Consumer, Driver, Executor, Folder, ParallelIterator, Reducer};
+use crate::{Consumer, Driver, Executor, Folder, ParallelIterator, Reducer, WithSetup};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum FindMatch {
@@ -173,6 +173,8 @@ struct FindConsumer<O> {
     upper_bound: usize,
     find_match: FindMatch,
 }
+
+impl<O> WithSetup for FindConsumer<O> {}
 
 impl<O, T> Consumer<T> for FindConsumer<O>
 where

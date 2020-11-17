@@ -1,6 +1,6 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* Inspect */
@@ -95,6 +95,15 @@ where
 struct InspectConsumer<C, O> {
     base: C,
     operation: O,
+}
+
+impl<C, O> WithSetup for InspectConsumer<C, O>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<'a, C, O, T> Consumer<T> for InspectConsumer<C, O>
@@ -240,6 +249,15 @@ struct InspectProducer<P, O> {
     operation: O,
 }
 
+impl<P, O> WithSetup for InspectProducer<P, O>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, P, O, T> Producer for InspectProducer<P, O>
 where
     P: Producer<Item = T>,
@@ -266,10 +284,6 @@ where
         });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, folder: F) -> F
@@ -314,18 +328,6 @@ where
         };
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 
     fn fold_with<F>(self, folder: F) -> F

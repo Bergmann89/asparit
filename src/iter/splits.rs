@@ -1,6 +1,6 @@
 use crate::{
-    Consumer, Executor, ExecutorCallback, Folder, IndexedParallelIterator, IndexedProducer,
-    IndexedProducerCallback, ParallelIterator, Producer, ProducerCallback, Reducer,
+    Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 pub struct Splits<X> {
@@ -20,14 +20,17 @@ where
 {
     type Item = X::Item;
 
-    fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
+    fn drive<E, C, D, R>(self, executor: E, base: C) -> E::Result
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer(ExecutorCallback::new(executor, consumer))
+        let splits = self.splits;
+        let consumer = SplitsConsumer { base, splits };
+
+        self.base.drive(executor, consumer)
     }
 
     fn with_producer<CB>(self, base: CB) -> CB::Output
@@ -48,14 +51,17 @@ impl<'a, X> IndexedParallelIterator<'a> for Splits<X>
 where
     X: IndexedParallelIterator<'a>,
 {
-    fn drive_indexed<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
+    fn drive_indexed<E, C, D, R>(self, executor: E, base: C) -> E::Result
     where
         E: Executor<'a, D>,
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
+        let splits = self.splits;
+        let consumer = SplitsConsumer { base, splits };
+
+        self.base.drive_indexed(executor, consumer)
     }
 
     fn with_producer_indexed<CB>(self, base: CB) -> CB::Output
@@ -119,6 +125,18 @@ struct SplitsProducer<P> {
     splits: usize,
 }
 
+impl<P> WithSetup for SplitsProducer<P>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup().merge(Setup {
+            splits: Some(self.splits),
+            ..Default::default()
+        })
+    }
+}
+
 impl<P> Producer for SplitsProducer<P>
 where
     P: Producer,
@@ -138,10 +156,6 @@ where
         let right = right.map(|base| Self { base, splits });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        Some(self.splits)
     }
 
     fn fold_with<F>(self, folder: F) -> F
@@ -180,22 +194,72 @@ where
         (left, right)
     }
 
-    fn splits(&self) -> Option<usize> {
-        Some(self.splits)
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
-    }
-
     fn fold_with<F>(self, folder: F) -> F
     where
         F: Folder<Self::Item>,
     {
         self.base.fold_with(folder)
+    }
+}
+
+/* SplitsConsumer */
+
+struct SplitsConsumer<C> {
+    base: C,
+    splits: usize,
+}
+
+impl<C> WithSetup for SplitsConsumer<C>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup().merge(Setup {
+            splits: Some(self.splits),
+            ..Default::default()
+        })
+    }
+}
+
+impl<C, I> Consumer<I> for SplitsConsumer<C>
+where
+    C: Consumer<I>,
+{
+    type Folder = C::Folder;
+    type Reducer = C::Reducer;
+    type Result = C::Result;
+
+    fn split(self) -> (Self, Self, Self::Reducer) {
+        let splits = self.splits;
+        let (left, right, reducer) = self.base.split();
+
+        let left = Self { base: left, splits };
+        let right = Self {
+            base: right,
+            splits,
+        };
+
+        (left, right, reducer)
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
+        let splits = self.splits;
+        let (left, right, reducer) = self.base.split_at(index);
+
+        let left = Self { base: left, splits };
+        let right = Self {
+            base: right,
+            splits,
+        };
+
+        (left, right, reducer)
+    }
+
+    fn into_folder(self) -> Self::Folder {
+        self.base.into_folder()
+    }
+
+    fn is_full(&self) -> bool {
+        self.base.is_full()
     }
 }

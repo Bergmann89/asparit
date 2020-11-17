@@ -71,7 +71,7 @@ mod tests {
                 move || j.fetch_add(2, Ordering::Relaxed),
                 |init, (init2, item)| (*init, init2, item),
             )
-            .with_splits(4)
+            .with_splits(16)
             .inspect(|x| {
                 println!(
                     "Thread ID = {:?}; Item = {:?}",

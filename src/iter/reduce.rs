@@ -1,4 +1,4 @@
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer, WithSetup};
 
 /* Reduce */
 
@@ -90,6 +90,8 @@ struct ReduceConsumer<S, O> {
     identity: S,
     operation: O,
 }
+
+impl<S, O> WithSetup for ReduceConsumer<S, O> {}
 
 impl<S, O> Clone for ReduceConsumer<S, O>
 where

@@ -1,4 +1,7 @@
-use crate::{Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer};
+use crate::{
+    Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
+    WithSetup,
+};
 
 /* Filter */
 
@@ -52,6 +55,15 @@ where
 struct FilterConsumer<C, O> {
     base: C,
     operation: O,
+}
+
+impl<C, O> WithSetup for FilterConsumer<C, O>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<'a, C, O, T> Consumer<T> for FilterConsumer<C, O>
@@ -179,6 +191,15 @@ struct FilterProducer<P, O> {
     operation: O,
 }
 
+impl<P, O> WithSetup for FilterProducer<P, O>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, P, O, T> Producer for FilterProducer<P, O>
 where
     P: Producer<Item = T>,
@@ -205,10 +226,6 @@ where
         });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, folder: F) -> F

@@ -1,4 +1,7 @@
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelExtend, ParallelIterator, Reducer};
+use crate::{
+    core::Driver, Consumer, Executor, Folder, ParallelExtend, ParallelIterator, Reducer, Setup,
+    WithSetup,
+};
 
 /* Partition */
 
@@ -161,6 +164,21 @@ macro_rules! parallel_extend_tuple {
                     base: ($($E::map_result($T),)+),
                     operation: None,
                 }
+            }
+        }
+
+        #[allow(non_snake_case)]
+        impl<O, $($C,)+> WithSetup for PartitionConsumer<($($C,)+), O>
+        where
+            $($C: WithSetup,)+
+        {
+            fn setup(&self) -> Setup {
+                let ($($C,)+) = &self.base;
+
+                let mut ret = Setup::default();
+                $(ret = ret.merge($C.setup());)+
+
+                ret
             }
         }
 

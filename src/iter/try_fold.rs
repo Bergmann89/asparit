@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     misc::Try, Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer,
+    Setup, WithSetup,
 };
 
 /* TryFold */
@@ -148,6 +149,15 @@ struct TryFoldConsumer<C, S, O, T> {
     marker: PhantomData<T>,
 }
 
+impl<C, S, O, T> WithSetup for TryFoldConsumer<C, S, O, T>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, C, S, O, T, I> Consumer<I> for TryFoldConsumer<C, S, O, T>
 where
     C: Consumer<T>,
@@ -250,6 +260,15 @@ struct TryFoldProducer<P, S, O, T> {
     marker: PhantomData<T>,
 }
 
+impl<P, S, O, T> WithSetup for TryFoldProducer<P, S, O, T>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, P, S, O, T> Producer for TryFoldProducer<P, S, O, T>
 where
     P: Producer,
@@ -292,10 +311,6 @@ where
         });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, folder: F) -> F

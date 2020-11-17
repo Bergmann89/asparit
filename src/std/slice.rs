@@ -1,7 +1,7 @@
 use crate::{
     Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
     IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
-    Reducer,
+    Reducer, WithSetup,
 };
 
 impl<'a, T> IntoParallelIterator<'a> for &'a [T]
@@ -118,6 +118,8 @@ struct IterProducer<'a, T> {
     slice: &'a [T],
 }
 
+impl<'a, T> WithSetup for IterProducer<'a, T> {}
+
 impl<'a, T> Producer for IterProducer<'a, T>
 where
     T: Send + Sync,
@@ -231,6 +233,8 @@ where
 struct IterMutProducer<'a, T> {
     slice: &'a mut [T],
 }
+
+impl<'a, T> WithSetup for IterMutProducer<'a, T> {}
 
 impl<'a, T> Producer for IterMutProducer<'a, T>
 where

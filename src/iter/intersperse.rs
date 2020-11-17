@@ -2,7 +2,7 @@ use std::iter::{once, DoubleEndedIterator, ExactSizeIterator, Fuse, Iterator};
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* Intersperse */
@@ -161,6 +161,15 @@ struct IntersperseProducer<P, I> {
     clone_first: bool,
 }
 
+impl<P, I> WithSetup for IntersperseProducer<P, I>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<P, I> Producer for IntersperseProducer<P, I>
 where
     P: Producer<Item = I>,
@@ -198,10 +207,6 @@ where
         });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, base: F) -> F
@@ -282,18 +287,6 @@ where
         };
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 
     fn fold_with<F>(self, base: F) -> F
@@ -460,6 +453,15 @@ struct IntersperseConsumer<C, I> {
     base: C,
     item: I,
     clone_first: bool,
+}
+
+impl<C, I> WithSetup for IntersperseConsumer<C, I>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<C, I> Consumer<I> for IntersperseConsumer<C, I>

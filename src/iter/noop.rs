@@ -1,6 +1,8 @@
-use crate::{Consumer, Folder, Reducer};
+use crate::{Consumer, Folder, Reducer, WithSetup};
 
 pub struct NoOpConsumer;
+
+impl WithSetup for NoOpConsumer {}
 
 impl<T> Consumer<T> for NoOpConsumer {
     type Folder = NoOpConsumer;

@@ -6,7 +6,7 @@ use std::sync::{
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* WhileSome */
@@ -134,6 +134,15 @@ struct WhileSomeProducer<P> {
     is_full: Arc<AtomicBool>,
 }
 
+impl<P> WithSetup for WhileSomeProducer<P>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<P, T> Producer for WhileSomeProducer<P>
 where
     P: Producer<Item = Option<T>>,
@@ -159,10 +168,6 @@ where
         let right = right.map(|x| Self { base: x, is_full });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 }
 
@@ -197,18 +202,6 @@ where
         };
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 }
 
@@ -278,6 +271,15 @@ impl<I, T> ExactSizeIterator for WhileSomeIter<I> where I: ExactSizeIterator<Ite
 struct WhileSomeConsumer<C> {
     base: C,
     is_full: Arc<AtomicBool>,
+}
+
+impl<C> WithSetup for WhileSomeConsumer<C>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<C, T> Consumer<Option<T>> for WhileSomeConsumer<C>

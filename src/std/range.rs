@@ -3,7 +3,7 @@ use std::ops::Range;
 use crate::{
     Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
     IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
-    Reducer,
+    Reducer, WithSetup,
 };
 
 /// Parallel iterator over a range, implemented for all integer types.
@@ -94,7 +94,15 @@ macro_rules! unindexed_parallel_iterator_impl {
                 D: Send + 'a,
                 R: Reducer<D> + Send + 'a,
             {
-                self.with_producer(ExecutorCallback::new(executor, consumer))
+                if let Some(len) = self.len_hint_opt() {
+                    let start = self.range.start;
+                    (0..len)
+                        .into_par_iter()
+                        .map(move |i| start.wrapping_add(i as $t))
+                        .drive_indexed(executor, consumer)
+                } else {
+                    self.with_producer(ExecutorCallback::new(executor, consumer))
+                }
             }
 
             fn with_producer<CB>(self, callback: CB) -> CB::Output
@@ -105,9 +113,17 @@ macro_rules! unindexed_parallel_iterator_impl {
             }
 
             fn len_hint_opt(&self) -> Option<usize> {
-                Some(self.range.length() as usize)
+                let len = self.range.length();
+
+                if len <= usize::MAX as $len_t {
+                    Some(len as usize)
+                } else {
+                    None
+                }
             }
         }
+
+        impl WithSetup for IterProducer<$t> {}
 
         impl Producer for IterProducer<$t> {
             type Item = $t;

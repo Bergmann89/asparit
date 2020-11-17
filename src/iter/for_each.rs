@@ -1,4 +1,4 @@
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, WithSetup};
 
 use super::noop::NoOpReducer;
 
@@ -37,6 +37,8 @@ where
 pub struct ForEachConsumer<O> {
     operation: O,
 }
+
+impl<O> WithSetup for ForEachConsumer<O> {}
 
 impl<O, I> Consumer<I> for ForEachConsumer<O>
 where

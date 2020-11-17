@@ -1,6 +1,6 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
 };
 
 /* Copied */
@@ -77,6 +77,15 @@ where
 
 struct CopiedConsumer<C> {
     base: C,
+}
+
+impl<C> WithSetup for CopiedConsumer<C>
+where
+    C: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
 }
 
 impl<'a, T, C> Consumer<&'a T> for CopiedConsumer<C>
@@ -196,6 +205,15 @@ struct CopiedProducer<P> {
     base: P,
 }
 
+impl<P> WithSetup for CopiedProducer<P>
+where
+    P: WithSetup,
+{
+    fn setup(&self) -> Setup {
+        self.base.setup()
+    }
+}
+
 impl<'a, T, P> Producer for CopiedProducer<P>
 where
     T: Copy + 'a,
@@ -215,10 +233,6 @@ where
         let right = right.map(|right| CopiedProducer { base: right });
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
     }
 
     fn fold_with<F>(self, folder: F) -> F
@@ -252,18 +266,6 @@ where
         let right = CopiedProducer { base: right };
 
         (left, right)
-    }
-
-    fn splits(&self) -> Option<usize> {
-        self.base.splits()
-    }
-
-    fn min_len(&self) -> Option<usize> {
-        self.base.min_len()
-    }
-
-    fn max_len(&self) -> Option<usize> {
-        self.base.max_len()
     }
 
     fn fold_with<F>(self, folder: F) -> F

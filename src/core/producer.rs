@@ -1,4 +1,4 @@
-use super::Folder;
+use super::{Folder, WithSetup};
 
 /// A variant on `Producer` which does not know its exact length or
 /// cannot represent it in a `usize`. These producers act like
@@ -8,7 +8,7 @@ use super::Folder;
 /// (In principle, `Producer` could extend this trait; however, it
 /// does not because to do so would require producers to carry their
 /// own length with them.)
-pub trait Producer: Send + Sized {
+pub trait Producer: WithSetup + Send + Sized {
     /// The type of item returned by this producer.
     type Item;
 
@@ -21,11 +21,6 @@ pub trait Producer: Send + Sized {
 
     /// Split midway into a new producer if possible, otherwise return `None`.
     fn split(self) -> (Self, Option<Self>);
-
-    /// Number of splits/threads this iterator will use to proceed.
-    fn splits(&self) -> Option<usize> {
-        None
-    }
 
     /// Iterate the producer, feeding each element to `folder`, and
     /// stop when the folder is full (or all elements have been consumed).
@@ -64,7 +59,7 @@ pub trait Producer: Send + Sized {
 /// [r]: https://github.com/rayon-rs/rayon/blob/master/src/iter/plumbing/README.md
 /// [20671]: https://github.com/rust-lang/rust/issues/20671
 #[allow(clippy::len_without_is_empty)]
-pub trait IndexedProducer: Send + Sized {
+pub trait IndexedProducer: WithSetup + Send + Sized {
     /// The type of item that will be produced by this producer once
     /// it is converted into an iterator.
     type Item;
@@ -83,38 +78,6 @@ pub trait IndexedProducer: Send + Sized {
     /// Split into two producers; one produces items `0..index`, the
     /// other `index..N`. Index must be less than or equal to `N`.
     fn split_at(self, index: usize) -> (Self, Self);
-
-    /// Number of splits/threads this iterator will use to proceed.
-    fn splits(&self) -> Option<usize> {
-        None
-    }
-
-    /// The minimum number of items that we will process
-    /// sequentially. Defaults to 1, which means that we will split
-    /// all the way down to a single item. This can be raised higher
-    /// using the [`with_min_len`] method, which will force us to
-    /// create sequential tasks at a larger granularity. Note that
-    /// Rayon automatically normally attempts to adjust the size of
-    /// parallel splits to reduce overhead, so this should not be
-    /// needed.
-    ///
-    /// [`with_min_len`]: ../trait.IndexedParallelIterator.html#method.with_min_len
-    fn min_len(&self) -> Option<usize> {
-        None
-    }
-
-    /// The maximum number of items that we will process
-    /// sequentially. Defaults to MAX, which means that we can choose
-    /// not to split at all. This can be lowered using the
-    /// [`with_max_len`] method, which will force us to create more
-    /// parallel tasks. Note that Rayon automatically normally
-    /// attempts to adjust the size of parallel splits to reduce
-    /// overhead, so this should not be needed.
-    ///
-    /// [`with_max_len`]: ../trait.IndexedParallelIterator.html#method.with_max_len
-    fn max_len(&self) -> Option<usize> {
-        None
-    }
 
     /// Iterate the producer, feeding each element to `folder`, and
     /// stop when the folder is full (or all elements have been consumed).

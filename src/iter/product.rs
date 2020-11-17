@@ -1,7 +1,7 @@
 use std::iter::{empty, once};
 use std::marker::PhantomData;
 
-use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer};
+use crate::{core::Driver, Consumer, Executor, Folder, ParallelIterator, Reducer, WithSetup};
 
 /* Product */
 
@@ -38,6 +38,8 @@ where
 /* ProductConsumer */
 
 pub struct ProductConsumer<P>(PhantomData<P>);
+
+impl<P> WithSetup for ProductConsumer<P> {}
 
 impl<P, I> Consumer<I> for ProductConsumer<P>
 where

@@ -1,4 +1,4 @@
-use super::{Folder, Reducer};
+use super::{Folder, Reducer, WithSetup};
 
 /// A consumer is effectively a [generalized "fold" operation][fold],
 /// and in fact each consumer will eventually be converted into a
@@ -14,7 +14,7 @@ use super::{Folder, Reducer};
 /// [fold]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.fold
 /// [`Folder`]: trait.Folder.html
 /// [`Producer`]: trait.Producer.html
-pub trait Consumer<I>: Send + Sized {
+pub trait Consumer<I>: WithSetup + Send + Sized {
     /// The type of folder that this consumer can be converted into.
     type Folder: Folder<I, Result = Self::Result>;
 

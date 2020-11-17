@@ -9,6 +9,7 @@ mod into_iter;
 mod iterator;
 mod producer;
 mod reducer;
+mod setup;
 
 pub use consumer::Consumer;
 pub use drain::{ParallelDrainFull, ParallelDrainRange};
@@ -21,3 +22,4 @@ pub use into_iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelR
 pub use iterator::{IndexedParallelIterator, ParallelIterator};
 pub use producer::{IndexedProducer, IndexedProducerCallback, Producer, ProducerCallback};
 pub use reducer::Reducer;
+pub use setup::{Setup, WithSetup};
