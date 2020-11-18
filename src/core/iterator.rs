@@ -8,6 +8,7 @@ use super::{
 use crate::{
     iter::{
         chain::Chain,
+        chunks::Chunks,
         cloned::Cloned,
         collect::Collect,
         copied::Copied,
@@ -1887,6 +1888,32 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
         } else {
             a.take(len_b + 1).interleave(b.take(len_b))
         }
+    }
+
+    /// Splits an iterator up into fixed-size chunks.
+    ///
+    /// Returns an iterator that returns `Vec`s of the given number of elements.
+    /// If the number of elements in the iterator is not divisible by `chunk_size`,
+    /// the last chunk may be shorter than `chunk_size`.
+    ///
+    /// See also [`par_chunks()`] and [`par_chunks_mut()`] for similar behavior on
+    /// slices, without having to allocate intermediate `Vec`s for the chunks.
+    ///
+    /// [`par_chunks()`]: ../slice/trait.ParallelSlice.html#method.par_chunks
+    /// [`par_chunks_mut()`]: ../slice/trait.ParallelSliceMut.html#method.par_chunks_mut
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// let a = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    /// let r: Vec<Vec<i32>> = a.into_par_iter().chunks(3).collect();
+    /// assert_eq!(r, vec![vec![1,2,3], vec![4,5,6], vec![7,8,9], vec![10]]);
+    /// ```
+    fn chunks(self, chunk_size: usize) -> Chunks<Self> {
+        assert!(chunk_size != 0, "chunk_size must not be zero");
+
+        Chunks::new(self, chunk_size)
     }
 
     /// Creates an iterator that yields the first `n` elements.

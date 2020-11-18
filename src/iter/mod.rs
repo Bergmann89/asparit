@@ -1,4 +1,5 @@
 pub mod chain;
+pub mod chunks;
 pub mod cloned;
 pub mod collect;
 pub mod copied;
@@ -39,26 +40,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        let a = vec![
-            vec![1usize, 2usize],
-            vec![3usize, 4usize],
-            vec![5usize, 6usize],
-        ];
-        let b = vec![
-            vec![7usize, 8usize],
-            vec![9usize, 10usize],
-            vec![11usize, 12usize],
-        ];
-
-        a.par_iter()
-            .cloned()
-            .chain(b)
+        vec![0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            .into_par_iter()
             .with_splits(1)
-            .interleave_shortest(
-                vec![vec![50, 51], vec![52, 53], vec![54, 55]]
-                    .into_par_iter()
-                    .take(2),
-            )
+            .chunks(4)
             .for_each(|x| {
                 dbg!(x);
             })
