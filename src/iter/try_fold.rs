@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     misc::Try, Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer,
-    Setup, WithSetup,
+    Setup, WithProducer, WithSetup,
 };
 
 /* TryFold */
@@ -52,6 +52,17 @@ where
             },
         )
     }
+}
+
+impl<'a, X, S, O, U, T> WithProducer<'a> for TryFold<X, S, O, T>
+where
+    X: WithProducer<'a>,
+    S: Fn() -> U + Clone + Send + 'a,
+    O: Fn(U, X::Item) -> T + Clone + Send + 'a,
+    U: Send,
+    T: Try<Ok = U> + Send + 'a,
+{
+    type Item = T;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
@@ -119,6 +130,16 @@ where
             },
         )
     }
+}
+
+impl<'a, X, U, O, T> WithProducer<'a> for TryFoldWith<X, U, O, T>
+where
+    X: WithProducer<'a>,
+    U: Clone + Send + 'a,
+    O: Fn(U, X::Item) -> T + Clone + Send + 'a,
+    T: Try<Ok = U> + Send + 'a,
+{
+    type Item = T;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where

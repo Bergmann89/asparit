@@ -6,7 +6,8 @@ use std::sync::{
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /* WhileSome */
@@ -43,13 +44,6 @@ where
         self.base.drive(executor, consumer)
     }
 
-    fn with_producer<CB>(self, base: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        self.base.with_producer(WhileSomeCallback { base })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         self.base.len_hint_opt()
     }
@@ -75,15 +69,38 @@ where
         self.base.drive_indexed(executor, consumer)
     }
 
-    fn with_producer_indexed<CB>(self, base: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.base.len_hint()
+    }
+}
+
+impl<'a, X, T> WithProducer<'a> for WhileSome<X>
+where
+    X: WithProducer<'a, Item = Option<T>>,
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, base: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        self.base.with_producer(WhileSomeCallback { base })
+    }
+}
+
+impl<'a, X, T> WithIndexedProducer<'a> for WhileSome<X>
+where
+    X: WithIndexedProducer<'a, Item = Option<T>>,
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, base: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
-        self.base.with_producer_indexed(WhileSomeCallback { base })
-    }
-
-    fn len_hint(&self) -> usize {
-        self.base.len_hint()
+        self.base.with_indexed_producer(WhileSomeCallback { base })
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 use super::map_with::{MapWithFolder, MapWithIter};
@@ -44,17 +45,6 @@ where
         self.base.drive(executor, consumer)
     }
 
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        self.base.with_producer(MapInitCallback {
-            callback,
-            init: self.init,
-            operation: self.operation,
-        })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         self.base.len_hint_opt()
     }
@@ -79,19 +69,50 @@ where
         self.base.drive_indexed(executor, consumer)
     }
 
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.base.len_hint()
+    }
+}
+
+impl<'a, X, S, O, T, U> WithProducer<'a> for MapInit<X, S, O>
+where
+    X: WithProducer<'a>,
+    O: Fn(&mut U, X::Item) -> T + Clone + Send + 'a,
+    T: Send + 'a,
+    S: Fn() -> U + Clone + Send + 'a,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: IndexedProducerCallback<'a, Self::Item>,
+        CB: ProducerCallback<'a, Self::Item>,
     {
-        self.base.with_producer_indexed(MapInitCallback {
+        self.base.with_producer(MapInitCallback {
             callback,
             init: self.init,
             operation: self.operation,
         })
     }
+}
 
-    fn len_hint(&self) -> usize {
-        self.base.len_hint()
+impl<'a, X, S, O, T, U> WithIndexedProducer<'a> for MapInit<X, S, O>
+where
+    X: WithIndexedProducer<'a>,
+    O: Fn(&mut U, X::Item) -> T + Clone + Send + 'a,
+    T: Send + 'a,
+    S: Fn() -> U + Clone + Send + 'a,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        self.base.with_indexed_producer(MapInitCallback {
+            callback,
+            init: self.init,
+            operation: self.operation,
+        })
     }
 }
 

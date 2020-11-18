@@ -1,6 +1,6 @@
 use crate::{
     Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
-    WithSetup,
+    WithProducer, WithSetup,
 };
 
 /* Fold */
@@ -46,6 +46,16 @@ where
             },
         )
     }
+}
+
+impl<'a, X, S, O, U> WithProducer<'a> for Fold<X, S, O>
+where
+    X: WithProducer<'a>,
+    S: Fn() -> U + Clone + Send + 'a,
+    O: Fn(U, X::Item) -> U + Clone + Send + 'a,
+    U: Send + 'a,
+{
+    type Item = U;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
@@ -107,6 +117,15 @@ where
             },
         )
     }
+}
+
+impl<'a, X, U, O> WithProducer<'a> for FoldWith<X, U, O>
+where
+    X: WithProducer<'a>,
+    U: Clone + Send + 'a,
+    O: Fn(U, X::Item) -> U + Clone + Send + 'a,
+{
+    type Item = U;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where

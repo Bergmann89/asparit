@@ -1,10 +1,7 @@
 use std::cmp::{Ord, Ordering};
 use std::iter::IntoIterator;
 
-use super::{
-    Consumer, Executor, FromParallelIterator, IndexedProducerCallback, IntoParallelIterator,
-    ProducerCallback, Reducer,
-};
+use super::{Consumer, Executor, FromParallelIterator, IntoParallelIterator, Reducer};
 
 use crate::{
     iter::{
@@ -82,25 +79,6 @@ pub trait ParallelIterator<'a>: Sized + Send {
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send + 'a,
         R: Reducer<D> + Send + 'a;
-
-    /// Internal method used to define the behavior of this parallel
-    /// iterator. You should not need to call this directly.
-    ///
-    /// This method converts the iterator into a producer P and then
-    /// invokes `callback.callback()` with P. Note that the type of
-    /// this producer is not defined as part of the API, since
-    /// `callback` must be defined generically for all producers. This
-    /// allows the producer type to contain references; it also means
-    /// that parallel iterators can adjust that type without causing a
-    /// breaking change.
-    ///
-    /// See the [README] for more details on the internals of parallel
-    /// iterators.
-    ///
-    /// [README]: README.md
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>;
 
     /// Internal method used to define the behavior of this parallel
     /// iterator. You should not need to call this directly.
@@ -1775,25 +1753,6 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
         C: Consumer<Self::Item, Result = D, Reducer = R> + 'a,
         D: Send + 'a,
         R: Reducer<D> + Send + 'a;
-
-    /// Internal method used to define the behavior of this parallel
-    /// iterator. You should not need to call this directly.
-    ///
-    /// This method converts the iterator into a producer P and then
-    /// invokes `callback.callback()` with P. Note that the type of
-    /// this producer is not defined as part of the API, since
-    /// `callback` must be defined generically for all producers. This
-    /// allows the producer type to contain references; it also means
-    /// that parallel iterators can adjust that type without causing a
-    /// breaking change.
-    ///
-    /// See the [README] for more details on the internals of parallel
-    /// iterators.
-    ///
-    /// [README]: README.md
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: IndexedProducerCallback<'a, Self::Item>;
 
     /// Produces an exact count of how many items this iterator will
     /// produce, presuming no panic occurs.

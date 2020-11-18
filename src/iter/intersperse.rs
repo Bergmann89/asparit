@@ -2,7 +2,8 @@ use std::iter::{once, DoubleEndedIterator, ExactSizeIterator, Fuse, Iterator};
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /* Intersperse */
@@ -42,15 +43,6 @@ where
         )
     }
 
-    fn with_producer<CB>(self, base: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        let item = self.item;
-
-        self.base.with_producer(IntersperseCallback { base, item })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         match self.base.len_hint_opt()? {
             0 => Some(0),
@@ -81,21 +73,46 @@ where
         )
     }
 
-    fn with_producer_indexed<CB>(self, base: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        match self.base.len_hint() {
+            0 => 0,
+            len => len - 1,
+        }
+    }
+}
+
+impl<'a, X, I> WithProducer<'a> for Intersperse<X, I>
+where
+    X: WithProducer<'a, Item = I>,
+    I: Clone + Send + 'a,
+{
+    type Item = X::Item;
+
+    fn with_producer<CB>(self, base: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        let item = self.item;
+
+        self.base.with_producer(IntersperseCallback { base, item })
+    }
+}
+
+impl<'a, X, I> WithIndexedProducer<'a> for Intersperse<X, I>
+where
+    X: WithIndexedProducer<'a, Item = I>,
+    I: Clone + Send + 'a,
+{
+    type Item = X::Item;
+
+    fn with_indexed_producer<CB>(self, base: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
         let item = self.item;
 
         self.base
-            .with_producer_indexed(IntersperseCallback { base, item })
-    }
-
-    fn len_hint(&self) -> usize {
-        match self.base.len_hint() {
-            0 => 0,
-            len => len - 1,
-        }
+            .with_indexed_producer(IntersperseCallback { base, item })
     }
 }
 

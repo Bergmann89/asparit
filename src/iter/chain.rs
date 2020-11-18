@@ -2,7 +2,8 @@ use std::iter::{DoubleEndedIterator, ExactSizeIterator, Iterator};
 
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /* Chain */
@@ -52,16 +53,6 @@ where
         E::join(left, right, reducer)
     }
 
-    fn with_producer<CB>(self, base: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        self.iterator_1.with_producer(ChainCallback1 {
-            base,
-            iterator_2: self.iterator_2,
-        })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         let len_1 = self.iterator_1.len_hint_opt();
         let len_2 = self.iterator_2.len_hint_opt();
@@ -98,18 +89,46 @@ where
         E::join(left, right, reducer)
     }
 
-    fn with_producer_indexed<CB>(self, base: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.iterator_1.len_hint() + self.iterator_2.len_hint()
+    }
+}
+
+impl<'a, X1, X2, T> WithProducer<'a> for Chain<X1, X2>
+where
+    X1: ParallelIterator<'a, Item = T> + WithProducer<'a, Item = T>,
+    X2: ParallelIterator<'a, Item = T> + WithProducer<'a, Item = T>,
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, base: CB) -> CB::Output
     where
-        CB: IndexedProducerCallback<'a, Self::Item>,
+        CB: ProducerCallback<'a, Self::Item>,
     {
-        self.iterator_1.with_producer_indexed(ChainCallback1 {
+        self.iterator_1.with_producer(ChainCallback1 {
             base,
             iterator_2: self.iterator_2,
         })
     }
+}
 
-    fn len_hint(&self) -> usize {
-        self.iterator_1.len_hint() + self.iterator_2.len_hint()
+impl<'a, X1, X2, T> WithIndexedProducer<'a> for Chain<X1, X2>
+where
+    X1: IndexedParallelIterator<'a, Item = T> + WithIndexedProducer<'a, Item = T>,
+    X2: IndexedParallelIterator<'a, Item = T> + WithIndexedProducer<'a, Item = T>,
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, base: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        self.iterator_1.with_indexed_producer(ChainCallback1 {
+            base,
+            iterator_2: self.iterator_2,
+        })
     }
 }
 
@@ -123,7 +142,7 @@ struct ChainCallback1<CB, X2> {
 impl<'a, CB, X2, T> ProducerCallback<'a, T> for ChainCallback1<CB, X2>
 where
     CB: ProducerCallback<'a, T>,
-    X2: ParallelIterator<'a, Item = T>,
+    X2: ParallelIterator<'a, Item = T> + WithProducer<'a, Item = T>,
     T: Send + 'a,
 {
     type Output = CB::Output;
@@ -142,7 +161,7 @@ where
 impl<'a, CB, X2, T> IndexedProducerCallback<'a, T> for ChainCallback1<CB, X2>
 where
     CB: IndexedProducerCallback<'a, T>,
-    X2: IndexedParallelIterator<'a, Item = T>,
+    X2: IndexedParallelIterator<'a, Item = T> + WithIndexedProducer<'a, Item = T>,
     T: Send + 'a,
 {
     type Output = CB::Output;
@@ -154,7 +173,7 @@ where
         let base = self.base;
 
         self.iterator_2
-            .with_producer_indexed(ChainCallback2 { base, producer_1 })
+            .with_indexed_producer(ChainCallback2 { base, producer_1 })
     }
 }
 

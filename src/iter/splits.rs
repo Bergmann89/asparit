@@ -1,6 +1,7 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 pub struct Splits<X> {
@@ -33,15 +34,6 @@ where
         self.base.drive(executor, consumer)
     }
 
-    fn with_producer<CB>(self, base: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        let splits = self.splits;
-
-        self.base.with_producer(SplitsCallback { base, splits })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         self.base.len_hint_opt()
     }
@@ -64,18 +56,41 @@ where
         self.base.drive_indexed(executor, consumer)
     }
 
-    fn with_producer_indexed<CB>(self, base: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.base.len_hint()
+    }
+}
+
+impl<'a, X> WithProducer<'a> for Splits<X>
+where
+    X: WithProducer<'a>,
+{
+    type Item = X::Item;
+
+    fn with_producer<CB>(self, base: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        let splits = self.splits;
+
+        self.base.with_producer(SplitsCallback { base, splits })
+    }
+}
+
+impl<'a, X> WithIndexedProducer<'a> for Splits<X>
+where
+    X: WithIndexedProducer<'a>,
+{
+    type Item = X::Item;
+
+    fn with_indexed_producer<CB>(self, base: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
         let splits = self.splits;
 
         self.base
-            .with_producer_indexed(SplitsCallback { base, splits })
-    }
-
-    fn len_hint(&self) -> usize {
-        self.base.len_hint()
+            .with_indexed_producer(SplitsCallback { base, splits })
     }
 }
 

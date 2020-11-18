@@ -2,7 +2,7 @@ use std::iter::IntoIterator;
 
 use crate::{
     Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
-    WithSetup,
+    WithProducer, WithSetup,
 };
 
 /* FlattenIter */
@@ -40,6 +40,15 @@ where
             },
         )
     }
+}
+
+impl<'a, X, SI> WithProducer<'a> for FlattenIter<X>
+where
+    X: WithProducer<'a, Item = SI>,
+    SI: IntoIterator + Send + 'a,
+    SI::Item: Send + 'a,
+{
+    type Item = SI::Item;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
@@ -89,6 +98,16 @@ where
             },
         )
     }
+}
+
+impl<'a, X, O, SI> WithProducer<'a> for FlatMapIter<X, O>
+where
+    X: WithProducer<'a>,
+    O: Fn(X::Item) -> SI + Clone + Send + 'a,
+    SI: IntoIterator + 'a,
+    SI::Item: Send + 'a,
+{
+    type Item = SI::Item;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where

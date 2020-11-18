@@ -8,6 +8,7 @@ pub use self::core::{
     Consumer, Driver, Executor, ExecutorCallback, Folder, IndexedParallelIterator, IndexedProducer,
     IndexedProducerCallback, IntoParallelIterator, IntoParallelRefIterator,
     IntoParallelRefMutIterator, ParallelDrainFull, ParallelDrainRange, ParallelExtend,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 pub use self::executor::{DefaultExecutor, SequentialExecutor};

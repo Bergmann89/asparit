@@ -3,7 +3,7 @@ use std::ops::Range;
 use crate::{
     Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
     IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
-    Reducer, WithSetup,
+    Reducer, WithIndexedProducer, WithProducer, WithSetup,
 };
 
 /// Parallel iterator over a range, implemented for all integer types.
@@ -105,13 +105,6 @@ macro_rules! unindexed_parallel_iterator_impl {
                 }
             }
 
-            fn with_producer<CB>(self, callback: CB) -> CB::Output
-            where
-                CB: ProducerCallback<'a, Self::Item>,
-            {
-                callback.callback(IterProducer { range: self.range })
-            }
-
             fn len_hint_opt(&self) -> Option<usize> {
                 let len = self.range.length();
 
@@ -120,6 +113,17 @@ macro_rules! unindexed_parallel_iterator_impl {
                 } else {
                     None
                 }
+            }
+        }
+
+        impl<'a> WithProducer<'a> for Iter<$t> {
+            type Item = $t;
+
+            fn with_producer<CB>(self, callback: CB) -> CB::Output
+            where
+                CB: ProducerCallback<'a, Self::Item>,
+            {
+                callback.callback(IterProducer { range: self.range })
             }
         }
 
@@ -163,18 +167,22 @@ macro_rules! indexed_parallel_iterator_impl {
                 D: Send + 'a,
                 R: Reducer<D> + Send + 'a,
             {
-                self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-            }
-
-            fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-            where
-                CB: IndexedProducerCallback<'a, Self::Item>,
-            {
-                callback.callback(IterProducer { range: self.range })
+                self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
             }
 
             fn len_hint(&self) -> usize {
                 self.range.length() as usize
+            }
+        }
+
+        impl<'a> WithIndexedProducer<'a> for Iter<$t> {
+            type Item = $t;
+
+            fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+            where
+                CB: IndexedProducerCallback<'a, Self::Item>,
+            {
+                callback.callback(IterProducer { range: self.range })
             }
         }
 

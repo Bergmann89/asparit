@@ -1,6 +1,7 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /* Inspect */
@@ -39,16 +40,6 @@ where
         )
     }
 
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        self.base.with_producer(InspectCallback {
-            base: callback,
-            operation: self.operation,
-        })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         self.base.len_hint_opt()
     }
@@ -75,18 +66,44 @@ where
         )
     }
 
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.base.len_hint()
+    }
+}
+
+impl<'a, X, O> WithProducer<'a> for Inspect<X, O>
+where
+    X: WithProducer<'a>,
+    O: Fn(&X::Item) + Clone + Send + 'a,
+{
+    type Item = X::Item;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: IndexedProducerCallback<'a, Self::Item>,
+        CB: ProducerCallback<'a, Self::Item>,
     {
-        self.base.with_producer_indexed(InspectCallback {
+        self.base.with_producer(InspectCallback {
             base: callback,
             operation: self.operation,
         })
     }
+}
 
-    fn len_hint(&self) -> usize {
-        self.base.len_hint()
+impl<'a, X, O> WithIndexedProducer<'a> for Inspect<X, O>
+where
+    X: WithIndexedProducer<'a>,
+    O: Fn(&X::Item) + Clone + Send + 'a,
+{
+    type Item = X::Item;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        self.base.with_indexed_producer(InspectCallback {
+            base: callback,
+            operation: self.operation,
+        })
     }
 }
 

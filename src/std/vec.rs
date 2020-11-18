@@ -9,12 +9,13 @@ use std::sync::Arc;
 use crate::{
     misc::simplify_range, Consumer, Executor, ExecutorCallback, Folder, IndexedParallelIterator,
     IndexedProducer, IndexedProducerCallback, IntoParallelIterator, ParallelDrainRange,
-    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, WithSetup,
+    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /// Parallel iterator that moves out of a vector.
 #[derive(Debug, Clone)]
-pub struct IntoIter<T: Send> {
+pub struct IntoIter<T> {
     vec: Vec<T>,
 }
 
@@ -43,14 +44,7 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(VecProducer::new(self.vec))
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint_opt(&self) -> Option<usize> {
@@ -69,18 +63,39 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: IndexedProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(VecProducer::new(self.vec))
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint(&self) -> usize {
         self.vec.len()
+    }
+}
+
+impl<'a, T> WithProducer<'a> for IntoIter<T>
+where
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(VecProducer::new(self.vec))
+    }
+}
+
+impl<'a, T> WithIndexedProducer<'a> for IntoIter<T>
+where
+    T: Send + 'a,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(VecProducer::new(self.vec))
     }
 }
 
@@ -285,14 +300,7 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(self.into_producer())
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint_opt(&self) -> Option<usize> {
@@ -311,18 +319,39 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: IndexedProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(self.into_producer())
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint(&self) -> usize {
         self.range.len()
+    }
+}
+
+impl<'a, T> WithProducer<'a> for Drain<'a, T>
+where
+    T: Send,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(self.into_producer())
+    }
+}
+
+impl<'a, T> WithIndexedProducer<'a> for Drain<'a, T>
+where
+    T: Send,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(self.into_producer())
     }
 }
 

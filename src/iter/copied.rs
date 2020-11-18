@@ -1,6 +1,7 @@
 use crate::{
     Consumer, Executor, Folder, IndexedParallelIterator, IndexedProducer, IndexedProducerCallback,
-    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithSetup,
+    ParallelIterator, Producer, ProducerCallback, Reducer, Setup, WithIndexedProducer,
+    WithProducer, WithSetup,
 };
 
 /* Copied */
@@ -32,13 +33,6 @@ where
         self.base.drive(executor, CopiedConsumer { base: consumer })
     }
 
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        self.base.with_producer(CopiedCallback { base: callback })
-    }
-
     fn len_hint_opt(&self) -> Option<usize> {
         self.base.len_hint_opt()
     }
@@ -60,16 +54,39 @@ where
             .drive_indexed(executor, CopiedConsumer { base: consumer })
     }
 
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
+    fn len_hint(&self) -> usize {
+        self.base.len_hint()
+    }
+}
+
+impl<'a, X, T> WithProducer<'a> for Copied<X>
+where
+    X: WithProducer<'a, Item = &'a T>,
+    T: Copy + Send + Sync + 'a,
+{
+    type Item = T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        self.base.with_producer(CopiedCallback { base: callback })
+    }
+}
+
+impl<'a, X, T> WithIndexedProducer<'a> for Copied<X>
+where
+    X: WithIndexedProducer<'a, Item = &'a T>,
+    T: Copy + Send + Sync + 'a,
+{
+    type Item = T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
         self.base
-            .with_producer_indexed(CopiedCallback { base: callback })
-    }
-
-    fn len_hint(&self) -> usize {
-        self.base.len_hint()
+            .with_indexed_producer(CopiedCallback { base: callback })
     }
 }
 

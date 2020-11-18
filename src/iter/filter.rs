@@ -1,6 +1,6 @@
 use crate::{
     Consumer, Executor, Folder, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
-    WithSetup,
+    WithProducer, WithSetup,
 };
 
 /* Filter */
@@ -38,6 +38,14 @@ where
             },
         )
     }
+}
+
+impl<'a, X, O> WithProducer<'a> for Filter<X, O>
+where
+    X: WithProducer<'a>,
+    O: Fn(&X::Item) -> bool + Clone + Send + 'a,
+{
+    type Item = X::Item;
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where

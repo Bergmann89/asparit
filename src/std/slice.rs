@@ -1,7 +1,7 @@
 use crate::{
     Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
     IndexedProducerCallback, IntoParallelIterator, ParallelIterator, Producer, ProducerCallback,
-    Reducer, WithSetup,
+    Reducer, WithIndexedProducer, WithProducer, WithSetup,
 };
 
 impl<'a, T> IntoParallelIterator<'a> for &'a [T]
@@ -71,14 +71,7 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(IterProducer { slice: self.slice })
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint_opt(&self) -> Option<usize> {
@@ -97,18 +90,39 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: IndexedProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(IterProducer { slice: self.slice })
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint(&self) -> usize {
         self.slice.len()
+    }
+}
+
+impl<'a, T> WithProducer<'a> for Iter<'a, T>
+where
+    T: Send + Sync,
+{
+    type Item = &'a T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(IterProducer { slice: self.slice })
+    }
+}
+
+impl<'a, T> WithIndexedProducer<'a> for Iter<'a, T>
+where
+    T: Send + Sync,
+{
+    type Item = &'a T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(IterProducer { slice: self.slice })
     }
 }
 
@@ -187,14 +201,7 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: ProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(IterMutProducer { slice: self.slice })
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint_opt(&self) -> Option<usize> {
@@ -213,18 +220,39 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        self.with_producer_indexed(ExecutorCallback::new(executor, consumer))
-    }
-
-    fn with_producer_indexed<CB>(self, callback: CB) -> CB::Output
-    where
-        CB: IndexedProducerCallback<'a, Self::Item>,
-    {
-        callback.callback(IterMutProducer { slice: self.slice })
+        self.with_indexed_producer(ExecutorCallback::new(executor, consumer))
     }
 
     fn len_hint(&self) -> usize {
         self.slice.len()
+    }
+}
+
+impl<'a, T> WithProducer<'a> for IterMut<'a, T>
+where
+    T: Send + Sync,
+{
+    type Item = &'a mut T;
+
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: ProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(IterMutProducer { slice: self.slice })
+    }
+}
+
+impl<'a, T> WithIndexedProducer<'a> for IterMut<'a, T>
+where
+    T: Send + Sync,
+{
+    type Item = &'a mut T;
+
+    fn with_indexed_producer<CB>(self, callback: CB) -> CB::Output
+    where
+        CB: IndexedProducerCallback<'a, Self::Item>,
+    {
+        callback.callback(IterMutProducer { slice: self.slice })
     }
 }
 

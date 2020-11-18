@@ -20,6 +20,9 @@ pub use folder::Folder;
 pub use from_iter::FromParallelIterator;
 pub use into_iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator};
 pub use iterator::{IndexedParallelIterator, ParallelIterator};
-pub use producer::{IndexedProducer, IndexedProducerCallback, Producer, ProducerCallback};
+pub use producer::{
+    IndexedProducer, IndexedProducerCallback, Producer, ProducerCallback, WithIndexedProducer,
+    WithProducer,
+};
 pub use reducer::Reducer;
 pub use setup::{Setup, WithSetup};
