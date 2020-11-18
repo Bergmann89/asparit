@@ -29,6 +29,7 @@ pub mod try_reduce;
 pub mod unzip;
 pub mod update;
 pub mod while_some;
+pub mod zip;
 
 #[cfg(test)]
 mod tests {
@@ -58,6 +59,8 @@ mod tests {
             .cloned()
             .chain(b)
             .update(|x| x.push(0))
+            .zip_eq(vec![10usize, 11usize, 12usize, 13usize, 14usize, 15usize])
+            .map(|x| x.0)
             .flatten_iter()
             .intersperse(100)
             .panic_fuse()

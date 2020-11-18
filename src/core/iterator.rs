@@ -35,6 +35,7 @@ use crate::{
         unzip::Unzip,
         update::Update,
         while_some::WhileSome,
+        zip::Zip,
     },
     misc::Try,
 };
@@ -1769,4 +1770,65 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// assert_eq!(vec.len(), 10);
     /// ```
     fn len_hint(&self) -> usize;
+
+    /// Iterates over tuples `(A, B)`, where the items `A` are from
+    /// this iterator and `B` are from the iterator given as argument.
+    /// Like the `zip` method on ordinary iterators, if the two
+    /// iterators are of unequal length, you only get the items they
+    /// have in common.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let result: Vec<_> = (1..4)
+    ///     .into_par_iter()
+    ///     .zip(vec!['a', 'b', 'c'])
+    ///     .collect();
+    ///
+    /// assert_eq!(result, [(1, 'a'), (2, 'b'), (3, 'c')]);
+    /// ```
+    fn zip<X>(self, other: X) -> Zip<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+    {
+        Zip::new(self, other.into_par_iter())
+    }
+
+    /// The same as `Zip`, but requires that both iterators have the same length.
+    ///
+    /// # Panics
+    /// Will panic if `self` and `other` are not the same length.
+    ///
+    /// ```should_panic
+    /// use rayon::prelude::*;
+    ///
+    /// let one = [1u8];
+    /// let two = [2u8, 2];
+    /// let one_iter = one.par_iter();
+    /// let two_iter = two.par_iter();
+    ///
+    /// // this will panic
+    /// let zipped: Vec<(&u8, &u8)> = one_iter.zip_eq(two_iter).collect();
+    ///
+    /// // we should never get here
+    /// assert_eq!(1, zipped.len());
+    /// ```
+    fn zip_eq<X>(self, other: X) -> Zip<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+    {
+        let other = other.into_par_iter();
+
+        assert_eq!(
+            self.len_hint(),
+            other.len_hint(),
+            "Iterators of 'zip_eq' operation must hae the same length!"
+        );
+
+        Zip::new(self, other)
+    }
 }
