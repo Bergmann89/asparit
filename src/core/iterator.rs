@@ -1,7 +1,9 @@
 use std::cmp::{Ord, Ordering};
 use std::iter::IntoIterator;
 
-use super::{Consumer, Executor, FromParallelIterator, IntoParallelIterator, Reducer};
+use super::{
+    Consumer, Executor, FromParallelIterator, IntoParallelIterator, Reducer, WithIndexedProducer,
+};
 
 use crate::{
     iter::{
@@ -17,6 +19,7 @@ use crate::{
         fold::{Fold, FoldWith},
         for_each::ForEach,
         inspect::Inspect,
+        interleave::Interleave,
         intersperse::Intersperse,
         map::Map,
         map_init::MapInit,
@@ -29,6 +32,7 @@ use crate::{
         reduce::{Reduce, ReduceWith},
         splits::Splits,
         sum::Sum,
+        take::Take,
         try_fold::{TryFold, TryFoldWith},
         try_for_each::{TryForEach, TryForEachInit, TryForEachWith},
         try_reduce::{TryReduce, TryReduceWith},
@@ -1830,5 +1834,76 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
         );
 
         Zip::new(self, other)
+    }
+
+    /// Interleaves elements of this iterator and the other given
+    /// iterator. Alternately yields elements from this iterator and
+    /// the given iterator, until both are exhausted. If one iterator
+    /// is exhausted before the other, the last elements are provided
+    /// from the other.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// let (x, y) = (vec![1, 2], vec![3, 4, 5, 6]);
+    /// let r: Vec<i32> = x.into_par_iter().interleave(y).collect();
+    /// assert_eq!(r, vec![1, 3, 2, 4, 5, 6]);
+    /// ```
+    fn interleave<X>(self, other: X) -> Interleave<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a, Item = Self::Item>,
+        X::Iter: IndexedParallelIterator<'a, Item = Self::Item>,
+    {
+        Interleave::new(self, other.into_par_iter())
+    }
+
+    /// Interleaves elements of this iterator and the other given
+    /// iterator, until one is exhausted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// let (x, y) = (vec![1, 2, 3, 4], vec![5, 6]);
+    /// let r: Vec<i32> = x.into_par_iter().interleave_shortest(y).collect();
+    /// assert_eq!(r, vec![1, 5, 2, 6, 3]);
+    /// ```
+    fn interleave_shortest<X, I>(self, other: X) -> Interleave<Take<Self>, Take<X::Iter>>
+    where
+        X: IntoParallelIterator<'a, Item = I>,
+        X::Iter: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
+        Self: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
+        I: Send + 'a,
+    {
+        let a = self;
+        let b = other.into_par_iter();
+
+        let len_a = a.len_hint();
+        let len_b = b.len_hint();
+
+        if len_a <= len_b {
+            a.take(len_a).interleave(b.take(len_a))
+        } else {
+            a.take(len_b + 1).interleave(b.take(len_b))
+        }
+    }
+
+    /// Creates an iterator that yields the first `n` elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let result: Vec<_> = (0..100)
+    ///     .into_par_iter()
+    ///     .take(5)
+    ///     .collect();
+    ///
+    /// assert_eq!(result, [0, 1, 2, 3, 4]);
+    /// ```
+    fn take(self, n: usize) -> Take<Self> {
+        Take::new(self, n)
     }
 }

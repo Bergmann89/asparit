@@ -10,6 +10,7 @@ pub mod flatten;
 pub mod fold;
 pub mod for_each;
 pub mod inspect;
+pub mod interleave;
 pub mod intersperse;
 pub mod map;
 pub mod map_init;
@@ -23,6 +24,7 @@ pub mod product;
 pub mod reduce;
 pub mod splits;
 pub mod sum;
+pub mod take;
 pub mod try_fold;
 pub mod try_for_each;
 pub mod try_reduce;
@@ -37,12 +39,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        use ::std::sync::atomic::{AtomicUsize, Ordering};
-        use ::std::sync::Arc;
-
-        let i = Arc::new(AtomicUsize::new(0));
-        let j = Arc::new(AtomicUsize::new(0));
-
         let a = vec![
             vec![1usize, 2usize],
             vec![3usize, 4usize],
@@ -54,46 +50,20 @@ mod tests {
             vec![11usize, 12usize],
         ];
 
-        let (x, y, z): (Vec<_>, Vec<_>, Vec<_>) = a
-            .par_iter()
+        a.par_iter()
             .cloned()
             .chain(b)
-            .update(|x| x.push(0))
-            .zip_eq(vec![10usize, 11usize, 12usize, 13usize, 14usize, 15usize])
-            .map(|x| x.0)
-            .flatten_iter()
-            .intersperse(100)
-            .panic_fuse()
-            .map(Some)
-            .while_some()
-            .map_init(
-                move || i.fetch_add(1, Ordering::Relaxed),
-                |init, item| (*init, item),
+            .with_splits(1)
+            .interleave_shortest(
+                vec![vec![50, 51], vec![52, 53], vec![54, 55]]
+                    .into_par_iter()
+                    .take(2),
             )
-            .map_init(
-                move || j.fetch_add(2, Ordering::Relaxed),
-                |init, (init2, item)| (*init, init2, item),
-            )
-            .with_splits(16)
-            .inspect(|x| {
-                println!(
-                    "Thread ID = {:?}; Item = {:?}",
-                    ::std::thread::current().id(),
-                    x
-                )
-            })
-            .partition_map(|(i, j, k)| match j % 3 {
-                0 => (Some(i), None, None),
-                1 => (None, Some(j), None),
-                2 => (None, None, Some(k)),
-                _ => unreachable!(),
+            .for_each(|x| {
+                dbg!(x);
             })
             .exec()
             .await;
-
-        dbg!(&x);
-        dbg!(&y);
-        dbg!(&z);
     }
 
     #[tokio::test]
