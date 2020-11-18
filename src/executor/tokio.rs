@@ -62,6 +62,10 @@ where
         exec_indexed(splitter, producer, consumer)
     }
 
+    fn ready(self, value: T1) -> Self::Result {
+        async move { value }.boxed()
+    }
+
     fn split(self) -> (Self, Self) {
         let mut left = self;
         let right = Self {

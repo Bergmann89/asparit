@@ -23,6 +23,8 @@ where
         C: Consumer<P::Item, Result = T1, Reducer = R> + 'a,
         R: Reducer<T1> + Send + 'a;
 
+    fn ready(self, value: T1) -> Self::Result;
+
     fn split(self) -> (Self, Self);
 
     fn join<R>(left: Self::Result, right: Self::Result, reducer: R) -> Self::Result

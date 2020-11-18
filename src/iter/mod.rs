@@ -1,6 +1,7 @@
 pub mod chain;
 pub mod chunks;
 pub mod cloned;
+pub mod cmp;
 pub mod collect;
 pub mod copied;
 pub mod count;
@@ -40,15 +41,14 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        vec![0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        let x = vec![0usize, 1, 2, 3, 4]
             .into_par_iter()
             .with_splits(1)
-            .chunks(4)
-            .for_each(|x| {
-                dbg!(x);
-            })
+            .lt(vec![0usize, 1, 2, 3, 4, 5])
             .exec()
             .await;
+
+        dbg!(x);
     }
 
     #[tokio::test]

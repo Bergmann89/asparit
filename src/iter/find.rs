@@ -160,7 +160,7 @@ where
         )
         .exec_with(executor);
 
-        E::map(ret, |x| x.is_some())
+        E::map(ret, |x| x.is_none())
     }
 }
 
@@ -265,8 +265,8 @@ where
             loop {
                 let boundary = match self.find_match {
                     FindMatch::Any if found > 0 => return self,
-                    FindMatch::First if found < self.lower_bound => return self,
-                    FindMatch::Last if found > self.upper_bound => return self,
+                    FindMatch::First if found != 0 && found < self.lower_bound => return self,
+                    FindMatch::Last if found != 0 && found > self.upper_bound => return self,
                     FindMatch::Any => self.lower_bound,
                     FindMatch::First => self.lower_bound,
                     FindMatch::Last => self.upper_bound,

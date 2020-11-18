@@ -10,6 +10,7 @@ use crate::{
         chain::Chain,
         chunks::Chunks,
         cloned::Cloned,
+        cmp::{Cmp, Compare, Equal, PartialCmp},
         collect::Collect,
         copied::Copied,
         count::Count,
@@ -1914,6 +1915,130 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
         assert!(chunk_size != 0, "chunk_size must not be zero");
 
         Chunks::new(self, chunk_size)
+    }
+
+    /// Lexicographically compares the elements of this `ParallelIterator` with those of
+    /// another.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use std::cmp::Ordering::*;
+    ///
+    /// let x = vec![1, 2, 3];
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 3, 0]), Less);
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 2, 3]), Equal);
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 2]), Greater);
+    /// ```
+    fn cmp<X>(self, other: X) -> Cmp<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a, Item = Self::Item>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: Ord,
+    {
+        Cmp::new(self, other.into_par_iter())
+    }
+
+    /// Lexicographically compares the elements of this `ParallelIterator` with those of
+    /// another.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    /// use std::cmp::Ordering::*;
+    /// use std::f64::NAN;
+    ///
+    /// let x = vec![1.0, 2.0, 3.0];
+    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 3.0, 0.0]), Some(Less));
+    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 2.0, 3.0]), Some(Equal));
+    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 2.0]), Some(Greater));
+    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, NAN]), None);
+    /// ```
+    fn partial_cmp<X>(self, other: X) -> PartialCmp<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialOrd<X::Item>,
+    {
+        PartialCmp::new(self, other.into_par_iter())
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are equal to those of another
+    fn eq<X>(self, other: X) -> Equal<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialEq<X::Item>,
+    {
+        Equal::new(self, other.into_par_iter(), true)
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are unequal to those of another
+    fn ne<X>(self, other: X) -> Equal<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialEq<X::Item>,
+    {
+        Equal::new(self, other.into_par_iter(), false)
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are lexicographically less than those of another.
+    fn lt<X>(self, other: X) -> Compare<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialOrd<X::Item>,
+    {
+        Compare::new(self, other.into_par_iter(), Ordering::Less, None)
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are less or equal to those of another.
+    fn le<X>(self, other: X) -> Compare<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialOrd<X::Item>,
+    {
+        Compare::new(
+            self,
+            other.into_par_iter(),
+            Ordering::Less,
+            Some(Ordering::Equal),
+        )
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are lexicographically greater than those of another.
+    fn gt<X>(self, other: X) -> Compare<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialOrd<X::Item>,
+    {
+        Compare::new(self, other.into_par_iter(), Ordering::Greater, None)
+    }
+
+    /// Determines if the elements of this `ParallelIterator`
+    /// are less or equal to those of another.
+    fn ge<X>(self, other: X) -> Compare<Self, X::Iter>
+    where
+        X: IntoParallelIterator<'a>,
+        X::Iter: IndexedParallelIterator<'a>,
+        Self::Item: PartialOrd<X::Item>,
+    {
+        Compare::new(
+            self,
+            other.into_par_iter(),
+            Ordering::Greater,
+            Some(Ordering::Equal),
+        )
     }
 
     /// Creates an iterator that yields the first `n` elements.

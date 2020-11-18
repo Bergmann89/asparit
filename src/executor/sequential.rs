@@ -38,6 +38,10 @@ where
         }
     }
 
+    fn ready(self, value: T1) -> Self::Result {
+        value
+    }
+
     fn split(self) -> (Self, Self) {
         (Self, Self)
     }
