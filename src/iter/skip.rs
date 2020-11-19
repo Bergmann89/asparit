@@ -5,18 +5,18 @@ use crate::{
     IndexedProducerCallback, ParallelIterator, Reducer, WithIndexedProducer,
 };
 
-pub struct Take<X> {
+pub struct Skip<X> {
     base: X,
     len: usize,
 }
 
-impl<X> Take<X> {
+impl<X> Skip<X> {
     pub fn new(base: X, len: usize) -> Self {
         Self { base, len }
     }
 }
 
-impl<'a, X, I> ParallelIterator<'a> for Take<X>
+impl<'a, X, I> ParallelIterator<'a> for Skip<X>
 where
     X: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
     I: Send + 'a,
@@ -38,7 +38,7 @@ where
     }
 }
 
-impl<'a, X, I> IndexedParallelIterator<'a> for Take<X>
+impl<'a, X, I> IndexedParallelIterator<'a> for Skip<X>
 where
     X: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
     I: Send + 'a,
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<'a, X> WithIndexedProducer<'a> for Take<X>
+impl<'a, X> WithIndexedProducer<'a> for Skip<X>
 where
     X: WithIndexedProducer<'a>,
 {
@@ -68,21 +68,21 @@ where
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
-        self.base.with_indexed_producer(TakeCallback {
+        self.base.with_indexed_producer(SkipCallback {
             base,
             len: self.len,
         })
     }
 }
 
-/* TakeCallback */
+/* SkipCallback */
 
-struct TakeCallback<CB> {
+struct SkipCallback<CB> {
     base: CB,
     len: usize,
 }
 
-impl<'a, CB, I> IndexedProducerCallback<'a, I> for TakeCallback<CB>
+impl<'a, CB, I> IndexedProducerCallback<'a, I> for SkipCallback<CB>
 where
     CB: IndexedProducerCallback<'a, I>,
 {
@@ -93,7 +93,7 @@ where
         P: IndexedProducer<Item = I> + 'a,
     {
         let index = min(self.len, producer.len());
-        let (producer, _) = producer.split_at(index);
+        let (_, producer) = producer.split_at(index);
 
         self.base.callback(producer)
     }

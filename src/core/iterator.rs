@@ -33,7 +33,9 @@ use crate::{
         partition::{Partition, PartitionMap},
         product::Product,
         reduce::{Reduce, ReduceWith},
+        skip::Skip,
         splits::Splits,
+        step_by::StepBy,
         sum::Sum,
         take::Take,
         try_fold::{TryFold, TryFoldWith},
@@ -2059,6 +2061,43 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     fn enumerate(self) -> Enumerate<Self> {
         Enumerate::new(self)
+    }
+
+    /// Creates an iterator that steps by the given amount
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///use rayon::prelude::*;
+    ///
+    /// let range = (3..10);
+    /// let result: Vec<i32> = range
+    ///    .into_par_iter()
+    ///    .step_by(3)
+    ///    .collect();
+    ///
+    /// assert_eq!(result, [3, 6, 9])
+    /// ```
+    fn step_by(self, step: usize) -> StepBy<Self> {
+        StepBy::new(self, step)
+    }
+
+    /// Creates an iterator that skips the first `n` elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let result: Vec<_> = (0..100)
+    ///     .into_par_iter()
+    ///     .skip(95)
+    ///     .collect();
+    ///
+    /// assert_eq!(result, [95, 96, 97, 98, 99]);
+    /// ```
+    fn skip(self, n: usize) -> Skip<Self> {
+        Skip::new(self, n)
     }
 
     /// Creates an iterator that yields the first `n` elements.

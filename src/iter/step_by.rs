@@ -1,5 +1,4 @@
-use std::iter::Zip;
-use std::ops::Range;
+use std::cmp::min;
 
 use crate::{
     Consumer, Executor, ExecutorCallback, IndexedParallelIterator, IndexedProducer,
@@ -7,24 +6,25 @@ use crate::{
     WithSetup,
 };
 
-/* Enumerate */
+/* StepBy */
 
-pub struct Enumerate<X> {
+pub struct StepBy<X> {
     base: X,
+    step: usize,
 }
 
-impl<X> Enumerate<X> {
-    pub fn new(base: X) -> Self {
-        Self { base }
+impl<X> StepBy<X> {
+    pub fn new(base: X, step: usize) -> Self {
+        Self { base, step }
     }
 }
 
-impl<'a, X, I> ParallelIterator<'a> for Enumerate<X>
+impl<'a, X, I> ParallelIterator<'a> for StepBy<X>
 where
     X: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
     I: Send + 'a,
 {
-    type Item = (usize, I);
+    type Item = I;
 
     fn drive<E, C, D, R>(self, executor: E, consumer: C) -> E::Result
     where
@@ -41,7 +41,7 @@ where
     }
 }
 
-impl<'a, X, I> IndexedParallelIterator<'a> for Enumerate<X>
+impl<'a, X, I> IndexedParallelIterator<'a> for StepBy<X>
 where
     X: IndexedParallelIterator<'a, Item = I> + WithIndexedProducer<'a, Item = I>,
     I: Send + 'a,
@@ -61,29 +61,33 @@ where
     }
 }
 
-impl<'a, X> WithIndexedProducer<'a> for Enumerate<X>
+impl<'a, X> WithIndexedProducer<'a> for StepBy<X>
 where
     X: WithIndexedProducer<'a>,
 {
-    type Item = (usize, X::Item);
+    type Item = X::Item;
 
     fn with_indexed_producer<CB>(self, base: CB) -> CB::Output
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
-        self.base.with_indexed_producer(EnumerateCallback { base })
+        self.base.with_indexed_producer(StepByCallback {
+            base,
+            step: self.step,
+        })
     }
 }
 
-/* EnumerateCallback */
+/* StepByCallback */
 
-struct EnumerateCallback<CB> {
+struct StepByCallback<CB> {
     base: CB,
+    step: usize,
 }
 
-impl<'a, CB, I> IndexedProducerCallback<'a, I> for EnumerateCallback<CB>
+impl<'a, CB, I> IndexedProducerCallback<'a, I> for StepByCallback<CB>
 where
-    CB: IndexedProducerCallback<'a, (usize, I)>,
+    CB: IndexedProducerCallback<'a, I>,
 {
     type Output = CB::Output;
 
@@ -91,43 +95,52 @@ where
     where
         P: IndexedProducer<Item = I> + 'a,
     {
-        self.base.callback(EnumerateProducer { base, offset: 0 })
+        self.base.callback(StepByProducer {
+            base,
+            step: self.step,
+        })
     }
 }
 
-/* EnumerateProducer */
+/* StepByProducer */
 
-struct EnumerateProducer<P> {
+struct StepByProducer<P> {
     base: P,
-    offset: usize,
+    step: usize,
 }
 
-impl<P> WithSetup for EnumerateProducer<P>
+impl<P> WithSetup for StepByProducer<P>
 where
     P: WithSetup,
 {
     fn setup(&self) -> Setup {
-        self.base.setup()
+        let Setup {
+            splits,
+            min_len,
+            max_len,
+        } = self.base.setup();
+
+        Setup {
+            splits,
+            min_len: min_len.map(|x| if x > 0 { (x - 1) / self.step + 1 } else { x }),
+            max_len: max_len.map(|x| x / self.step),
+        }
     }
 }
 
-impl<P> Producer for EnumerateProducer<P>
+impl<P> Producer for StepByProducer<P>
 where
     P: IndexedProducer,
 {
-    type Item = (usize, P::Item);
-    type IntoIter = Zip<Range<usize>, P::IntoIter>;
+    type Item = P::Item;
+    type IntoIter = std::iter::StepBy<P::IntoIter>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let base = self.base.into_iter();
-        let start = self.offset;
-        let end = start + base.len();
-
-        (start..end).zip(base)
+        self.base.into_iter().step_by(self.step)
     }
 
     fn split(self) -> (Self, Option<Self>) {
-        let len = self.base.len();
+        let len = self.len();
         if len < 2 {
             return (self, None);
         }
@@ -138,35 +151,33 @@ where
     }
 }
 
-impl<P> IndexedProducer for EnumerateProducer<P>
+impl<P> IndexedProducer for StepByProducer<P>
 where
     P: IndexedProducer,
 {
-    type Item = (usize, P::Item);
-    type IntoIter = Zip<Range<usize>, P::IntoIter>;
+    type Item = P::Item;
+    type IntoIter = std::iter::StepBy<P::IntoIter>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let base = self.base.into_iter();
-        let start = self.offset;
-        let end = start + base.len();
-
-        (start..end).zip(base)
+        self.base.into_iter().step_by(self.step)
     }
 
     fn len(&self) -> usize {
-        self.base.len()
+        self.base.len() / self.step
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
+        let index = min(index * self.step, self.base.len());
+
         let (left, right) = self.base.split_at(index);
 
         let left = Self {
             base: left,
-            offset: self.offset,
+            step: self.step,
         };
         let right = Self {
             base: right,
-            offset: self.offset + index,
+            step: self.step,
         };
 
         (left, right)

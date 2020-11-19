@@ -137,7 +137,7 @@ where
 
         iterator_a
             .zip(iterator_b)
-            .all(move |(x, y)| dbg!(PartialEq::eq(&x, &y)) == expected)
+            .all(move |(x, y)| PartialEq::eq(&x, &y) == expected)
             .exec_with(executor)
     }
 }

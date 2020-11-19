@@ -25,7 +25,9 @@ pub mod panic_fuse;
 pub mod partition;
 pub mod product;
 pub mod reduce;
+pub mod skip;
 pub mod splits;
+pub mod step_by;
 pub mod sum;
 pub mod take;
 pub mod try_fold;
@@ -42,8 +44,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        let x = vec![0usize, 1, 2, 3, 4]
+        let x = vec![0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             .into_par_iter()
+            .skip(1)
+            .step_by(3)
             .enumerate()
             .for_each(|x| {
                 dbg!(x);
