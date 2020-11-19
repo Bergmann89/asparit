@@ -23,6 +23,7 @@ pub mod min;
 pub mod noop;
 pub mod panic_fuse;
 pub mod partition;
+pub mod position;
 pub mod product;
 pub mod reduce;
 pub mod skip;
@@ -44,14 +45,9 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        let x = vec![0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        let x = vec![0usize, 1, 2, 3, 4, 5]
             .into_par_iter()
-            .skip(1)
-            .step_by(3)
-            .enumerate()
-            .for_each(|x| {
-                dbg!(x);
-            })
+            .position_any(|x| x % 2 == 1)
             .exec()
             .await;
 

@@ -31,6 +31,7 @@ use crate::{
         min::{Min, MinBy, MinByKey},
         panic_fuse::PanicFuse,
         partition::{Partition, PartitionMap},
+        position::Position,
         product::Product,
         reduce::{Reduce, ReduceWith},
         skip::Skip,
@@ -2116,5 +2117,92 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     fn take(self, n: usize) -> Take<Self> {
         Take::new(self, n)
+    }
+
+    /// Searches for **some** item in the parallel iterator that
+    /// matches the given operation, and returns its index.  Like
+    /// `ParallelIterator::find_any`, the parallel search will not
+    /// necessarily find the **first** match, and once a match is
+    /// found we'll attempt to stop processing any more.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// let i = a.par_iter().position_any(|&x| x == 3).expect("found");
+    /// assert!(i == 2 || i == 3);
+    ///
+    /// assert_eq!(a.par_iter().position_any(|&x| x == 100), None);
+    /// ```
+    fn position_any<O>(self, operation: O) -> Position<Self, O>
+    where
+        O: Fn(Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Position::new(self, operation, FindMatch::Any)
+    }
+
+    /// Searches for the sequentially **first** item in the parallel iterator
+    /// that matches the given operation, and returns its index.
+    ///
+    /// Like `ParallelIterator::find_first`, once a match is found,
+    /// all attempts to the right of the match will be stopped, while
+    /// attempts to the left must continue in case an earlier match
+    /// is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "first" may be nebulous.  If you
+    /// just want the first match that discovered anywhere in the iterator,
+    /// `position_any` is a better choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// assert_eq!(a.par_iter().position_first(|&x| x == 3), Some(2));
+    ///
+    /// assert_eq!(a.par_iter().position_first(|&x| x == 100), None);
+    /// ```
+    fn position_first<O>(self, operation: O) -> Position<Self, O>
+    where
+        O: Fn(Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Position::new(self, operation, FindMatch::First)
+    }
+
+    /// Searches for the sequentially **last** item in the parallel iterator
+    /// that matches the given operation, and returns its index.
+    ///
+    /// Like `ParallelIterator::find_last`, once a match is found,
+    /// all attempts to the left of the match will be stopped, while
+    /// attempts to the right must continue in case a later match
+    /// is found.
+    ///
+    /// Note that not all parallel iterators have a useful order, much like
+    /// sequential `HashMap` iteration, so "last" may be nebulous.  When the
+    /// order doesn't actually matter to you, `position_any` is a better
+    /// choice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let a = [1, 2, 3, 3];
+    ///
+    /// assert_eq!(a.par_iter().position_last(|&x| x == 3), Some(3));
+    ///
+    /// assert_eq!(a.par_iter().position_last(|&x| x == 100), None);
+    /// ```
+    fn position_last<O>(self, operation: O) -> Position<Self, O>
+    where
+        O: Fn(Self::Item) -> bool + Clone + Send + 'a,
+    {
+        Position::new(self, operation, FindMatch::Last)
     }
 }

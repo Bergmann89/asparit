@@ -232,7 +232,13 @@ where
     }
 
     fn is_full(&self) -> bool {
-        self.found.load(Ordering::Relaxed) > 0
+        let found = self.found.load(Ordering::Relaxed);
+
+        match self.find_match {
+            FindMatch::Any => found != 0,
+            FindMatch::First => found != 0 && found < self.lower_bound,
+            FindMatch::Last => found != 0 && found > self.upper_bound,
+        }
     }
 }
 
@@ -298,7 +304,23 @@ where
     }
 
     fn is_full(&self) -> bool {
-        self.found.load(Ordering::Relaxed) > 0
+        let found_best_in_range = match self.find_match {
+            FindMatch::Any => self.item.is_some(),
+            FindMatch::First => self.item.is_some(),
+            FindMatch::Last => false,
+        };
+
+        if found_best_in_range {
+            return true;
+        }
+
+        let found = self.found.load(Ordering::Relaxed);
+
+        match self.find_match {
+            FindMatch::Any => found != 0,
+            FindMatch::First => found != 0 && found < self.lower_bound,
+            FindMatch::Last => found != 0 && found > self.upper_bound,
+        }
     }
 }
 
