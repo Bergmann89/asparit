@@ -13,11 +13,7 @@ use crate::{
     WithIndexedProducer, WithProducer, WithSetup,
 };
 
-/// Parallel iterator that moves out of a vector.
-#[derive(Debug, Clone)]
-pub struct IntoIter<T> {
-    vec: Vec<T>,
-}
+/* Vec */
 
 impl<'a, T> IntoParallelIterator<'a> for Vec<T>
 where
@@ -93,6 +89,11 @@ where
 }
 
 /* IntoIter */
+
+#[derive(Debug, Clone)]
+pub struct IntoIter<T> {
+    pub vec: Vec<T>,
+}
 
 impl<'a, T> ParallelIterator<'a> for IntoIter<T>
 where
