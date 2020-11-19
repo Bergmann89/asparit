@@ -34,6 +34,7 @@ use crate::{
         position::Position,
         product::Product,
         reduce::{Reduce, ReduceWith},
+        rev::Rev,
         skip::Skip,
         splits::Splits,
         step_by::StepBy,
@@ -2204,5 +2205,24 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
         O: Fn(Self::Item) -> bool + Clone + Send + 'a,
     {
         Position::new(self, operation, FindMatch::Last)
+    }
+
+    /// Produces a new iterator with the elements of this iterator in
+    /// reverse order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let result: Vec<_> = (0..5)
+    ///     .into_par_iter()
+    ///     .rev()
+    ///     .collect();
+    ///
+    /// assert_eq!(result, [4, 3, 2, 1, 0]);
+    /// ```
+    fn rev(self) -> Rev<Self> {
+        Rev::new(self)
     }
 }

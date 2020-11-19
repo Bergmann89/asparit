@@ -19,14 +19,14 @@ impl<X, T> Collect<X, T> {
     }
 }
 
-impl<'a, X, T> Driver<'a, T> for Collect<X, T>
+impl<'a, X, T> Driver<'a, T, T::ExecutorItem2, T::ExecutorItem3> for Collect<X, T>
 where
     X: ParallelIterator<'a>,
     T: FromParallelIterator<'a, X::Item> + Send + 'a,
 {
     fn exec_with<E>(self, executor: E) -> E::Result
     where
-        E: Executor<'a, T>,
+        E: Executor<'a, T, T::ExecutorItem2, T::ExecutorItem3>,
     {
         T::from_par_iter(executor, self.iterator)
     }

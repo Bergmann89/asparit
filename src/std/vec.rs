@@ -7,10 +7,10 @@ use std::slice::{from_raw_parts_mut, IterMut};
 use std::sync::Arc;
 
 use crate::{
-    misc::simplify_range, Consumer, Executor, ExecutorCallback, Folder, IndexedParallelIterator,
-    IndexedProducer, IndexedProducerCallback, IntoParallelIterator, ParallelDrainRange,
-    ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, WithIndexedProducer,
-    WithProducer, WithSetup,
+    misc::simplify_range, Consumer, Executor, ExecutorCallback, Folder, FromParallelIterator,
+    IndexedParallelIterator, IndexedProducer, IndexedProducerCallback, IntoParallelIterator,
+    ParallelDrainRange, ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer,
+    WithIndexedProducer, WithProducer, WithSetup,
 };
 
 /// Parallel iterator that moves out of a vector.
@@ -30,6 +30,69 @@ where
         IntoIter { vec: self }
     }
 }
+
+impl<'a, I> ParallelExtend<'a, I, VecExtendResult<I>> for Vec<I>
+where
+    I: Send + 'a,
+{
+    type Consumer = VecConsumer<I>;
+
+    fn into_consumer(self) -> Self::Consumer {
+        VecConsumer { vec: Some(self) }
+    }
+
+    fn map_result(inner: VecExtendResult<I>) -> Self {
+        let mut vec = inner.vec.unwrap();
+
+        for mut items in inner.items {
+            vec.append(&mut items);
+        }
+
+        vec
+    }
+}
+
+impl<'a, I> FromParallelIterator<'a, I> for Vec<I>
+where
+    I: Send + 'a,
+{
+    type ExecutorItem2 = VecExtendResult<I>;
+    type ExecutorItem3 = ();
+
+    fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
+    where
+        E: Executor<'a, Self, VecExtendResult<I>>,
+        X: IntoParallelIterator<'a, Item = I>,
+    {
+        let result = Self::default();
+        let consumer = result.into_consumer();
+        let iterator = iterator.into_par_iter();
+
+        let inner = iterator.drive(executor.into_inner(), consumer);
+
+        E::map(inner, ParallelExtend::map_result)
+    }
+}
+
+impl<'a, T> ParallelDrainRange<'a, usize> for &'a mut Vec<T>
+where
+    T: Send,
+{
+    type Iter = Drain<'a, T>;
+    type Item = T;
+
+    fn par_drain<R: RangeBounds<usize>>(self, range: R) -> Self::Iter {
+        let length = self.len();
+
+        Drain {
+            vec: self,
+            range: simplify_range(range, length),
+            length,
+        }
+    }
+}
+
+/* IntoIter */
 
 impl<'a, T> ParallelIterator<'a> for IntoIter<T>
 where
@@ -99,20 +162,16 @@ where
     }
 }
 
-impl<'a, T> ParallelDrainRange<'a, usize> for &'a mut Vec<T>
-where
-    T: Send,
-{
-    type Iter = Drain<'a, T>;
-    type Item = T;
+/* VecContainer */
 
-    fn par_drain<R: RangeBounds<usize>>(self, range: R) -> Self::Iter {
-        let length = self.len();
+struct VecContainer<T>(Vec<T>);
 
-        Drain {
-            vec: self,
-            range: simplify_range(range, length),
-            length,
+unsafe impl<T> Sync for VecContainer<T> {}
+
+impl<T> Drop for VecContainer<T> {
+    fn drop(&mut self) {
+        unsafe {
+            self.0.set_len(0);
         }
     }
 }
@@ -123,18 +182,6 @@ struct VecProducer<'a, T> {
     vec: Arc<VecContainer<T>>,
     slice: &'a mut [T],
 }
-
-struct VecContainer<T>(Vec<T>);
-
-impl<T> Drop for VecContainer<T> {
-    fn drop(&mut self) {
-        unsafe {
-            self.0.set_len(0);
-        }
-    }
-}
-
-unsafe impl<T> Sync for VecContainer<T> {}
 
 impl<'a, T> VecProducer<'a, T> {
     fn new(mut vec: Vec<T>) -> Self {
@@ -489,29 +536,6 @@ impl<'a, T, C> ExactSizeIterator for SliceIter<'a, T, C> {
 }
 
 impl<'a, T, C> FusedIterator for SliceIter<'a, T, C> {}
-
-/* ParallelExtend */
-
-impl<'a, I> ParallelExtend<'a, I, VecExtendResult<I>> for Vec<I>
-where
-    I: Send + 'a,
-{
-    type Consumer = VecConsumer<I>;
-
-    fn into_consumer(self) -> Self::Consumer {
-        VecConsumer { vec: Some(self) }
-    }
-
-    fn map_result(inner: VecExtendResult<I>) -> Self {
-        let mut vec = inner.vec.unwrap();
-
-        for mut items in inner.items {
-            vec.append(&mut items);
-        }
-
-        vec
-    }
-}
 
 /* VecConsumer */
 

@@ -26,6 +26,7 @@ pub mod partition;
 pub mod position;
 pub mod product;
 pub mod reduce;
+pub mod rev;
 pub mod skip;
 pub mod splits;
 pub mod step_by;
@@ -45,9 +46,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_for_each() {
-        let x = vec![0usize, 1, 2, 3, 4, 5]
+        let x: Vec<usize> = vec![0usize, 1, 2, 3, 4, 5]
             .into_par_iter()
-            .position_any(|x| x % 2 == 1)
+            .rev()
+            .collect()
             .exec()
             .await;
 

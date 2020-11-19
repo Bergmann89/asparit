@@ -36,10 +36,13 @@ use super::{Executor, IntoParallelIterator};
 /// let bh: BlackHole = (0i32..1000).into_par_iter().collect();
 /// assert_eq!(bh.mass, 4000);
 /// ```
-pub trait FromParallelIterator<'a, T>: Send + Sized
+pub trait FromParallelIterator<'a, I>: Send + Sized
 where
-    T: Send + 'a,
+    I: Send + 'a,
 {
+    type ExecutorItem2: Send + 'a;
+    type ExecutorItem3: Send + 'a;
+
     /// Creates an instance of the collection from the parallel iterator `iterator`.
     ///
     /// If your collection is not naturally parallel, the easiest (and
@@ -57,12 +60,14 @@ where
     /// [`iterator.for_each`]: trait.ParallelIterator.html#method.for_each
     fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
     where
-        E: Executor<'a, Self>,
-        X: IntoParallelIterator<'a, Item = T>,
-        T: 'a;
+        E: Executor<'a, Self, Self::ExecutorItem2, Self::ExecutorItem3>,
+        X: IntoParallelIterator<'a, Item = I>;
 }
 
 impl<'a> FromParallelIterator<'a, ()> for () {
+    type ExecutorItem2 = ();
+    type ExecutorItem3 = ();
+
     fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
     where
         E: Executor<'a, Self>,
