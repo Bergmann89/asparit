@@ -1,13 +1,13 @@
-mod sequential;
+mod simple;
 #[cfg(feature = "tokio-executor")]
 mod tokio;
 
 #[cfg(feature = "tokio-executor")]
 pub use self::tokio::Tokio as TokioExecutor;
-pub use sequential::Sequential as SequentialExecutor;
+pub use simple::Simple as SimpleExecutor;
 
 #[cfg(feature = "tokio-executor")]
 pub type DefaultExecutor = TokioExecutor;
 
 #[cfg(not(feature = "tokio-executor"))]
-pub type DefaultExecutor = SequentialExecutor;
+pub type DefaultExecutor = SimpleExecutor;

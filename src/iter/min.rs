@@ -57,8 +57,8 @@ where
 
         self.iterator
             .reduce_with(move |a, b| match operation(&a, &b) {
-                Ordering::Greater => b,
-                _ => a,
+                Ordering::Less => a,
+                _ => b,
             })
             .exec_with(executor)
     }

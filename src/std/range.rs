@@ -12,14 +12,15 @@ use crate::{
 /// which is not implemented for `u64`, `i64`, `u128`, or `i128`.
 ///
 /// ```
-/// use rayon::prelude::*;
+/// use asparit::*;
 ///
 /// let p = (0..25usize)
 ///     .into_par_iter()
 ///     .zip(0..25usize)
 ///     .filter(|&(x, y)| x % 5 == 0 || y % 5 == 0)
 ///     .map(|(x, y)| x * y)
-///     .sum::<usize>();
+///     .sum::<usize>()
+///     .exec_with(SimpleExecutor);
 ///
 /// let s = (0..25usize)
 ///     .zip(0..25)

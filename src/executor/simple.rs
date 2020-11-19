@@ -1,16 +1,16 @@
 use crate::core::{Consumer, Executor, Folder, IndexedProducer, Producer, Reducer};
 
 #[derive(Default)]
-pub struct Sequential;
+pub struct Simple;
 
-impl<'a, T1, T2, T3> Executor<'a, T1, T2, T3> for Sequential
+impl<'a, T1, T2, T3> Executor<'a, T1, T2, T3> for Simple
 where
     T1: Send + 'a,
     T2: Send + 'a,
     T3: Send + 'a,
 {
     type Result = T1;
-    type Inner = Sequential;
+    type Inner = Simple;
 
     fn exec<P, C, R>(self, producer: P, consumer: C) -> Self::Result
     where

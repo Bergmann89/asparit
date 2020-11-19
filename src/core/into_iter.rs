@@ -23,8 +23,10 @@ pub trait IntoParallelIterator<'a> {
     /// use asparit::*;
     ///
     /// println!("counting in parallel:");
-    /// (0..100).into_par_iter()
-    ///     .for_each(|i| println!("{}", i));
+    /// (0..100)
+    ///     .into_par_iter()
+    ///     .for_each(|i| println!("{}", i))
+    ///     .exec_with(SimpleExecutor);
     /// ```
     ///
     /// This conversion is often implicit for arguments to methods like [`zip`].
@@ -32,7 +34,11 @@ pub trait IntoParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     ///
-    /// let v: Vec<_> = (0..5).into_par_iter().zip(5..10).collect();
+    /// let v: Vec<_> = (0..5)
+    ///     .into_par_iter()
+    ///     .zip(5..10)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     /// assert_eq!(v, [(0, 5), (1, 6), (2, 7), (3, 8), (4, 9)]);
     /// ```
     ///
@@ -69,12 +75,18 @@ pub trait IntoParallelRefIterator<'a> {
     /// use asparit::*;
     ///
     /// let v: Vec<_> = (0..100).collect();
-    /// assert_eq!(v.par_iter().sum::<i32>(), 100 * 99 / 2);
+    /// assert_eq!(
+    ///     v.par_iter().sum::<i32>().exec_with(SimpleExecutor),
+    ///     100 * 99 / 2
+    /// );
     ///
     /// // `v.par_iter()` is shorthand for `(&v).into_par_iter()`,
     /// // producing the exact same references.
-    /// assert!(v.par_iter().zip(&v)
-    ///          .all(|(a, b)| std::ptr::eq(a, b)));
+    /// assert!(v
+    ///     .par_iter()
+    ///     .zip(&v)
+    ///     .all(|(a, b)| std::ptr::eq(a, b))
+    ///     .exec_with(SimpleExecutor));
     /// ```
     fn par_iter(&'a self) -> Self::Iter;
 }
@@ -108,7 +120,10 @@ pub trait IntoParallelRefMutIterator<'a> {
     /// use asparit::*;
     ///
     /// let mut v = vec![0usize; 5];
-    /// v.par_iter_mut().enumerate().for_each(|(i, x)| *x = i);
+    /// v.par_iter_mut()
+    ///     .enumerate()
+    ///     .for_each(|(i, x)| *x = i)
+    ///     .exec_with(SimpleExecutor);
     /// assert_eq!(v, [0, 1, 2, 3, 4]);
     /// ```
     fn par_iter_mut(&'a mut self) -> Self::Iter;

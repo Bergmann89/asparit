@@ -137,12 +137,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
+    /// use asparit::*;
     /// use std::sync::mpsc::channel;
-    /// use rayon::prelude::*;
     ///
     /// let (sender, receiver) = channel();
     ///
-    /// (0..5).into_par_iter().for_each_with(sender, |s, x| s.send(x).unwrap());
+    /// (0..5)
+    ///     .into_par_iter()
+    ///     .for_each_with(sender, |s, x| s.send(x).unwrap())
+    ///     .exec_with(SimpleExecutor);
     ///
     /// let mut res: Vec<_> = receiver.iter().collect();
     ///
@@ -164,26 +167,6 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// The `init` function will be called only as needed for a value to be
     /// paired with the group of items in each rayon job.  There is no
     /// constraint on that returned type at all!
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rand::Rng;
-    /// use rayon::prelude::*;
-    ///
-    /// let mut v = vec![0u8; 1_000_000];
-    ///
-    /// v.par_chunks_mut(1000)
-    ///     .for_each_init(
-    ///         || rand::thread_rng(),
-    ///         |rng, chunk| rng.fill(chunk),
-    ///     );
-    ///
-    /// // There's a remote chance that this will fail...
-    /// for i in 0u8..=255 {
-    ///     assert!(v.contains(&i));
-    /// }
-    /// ```
     fn for_each_init<O, S, T>(self, init: S, operation: O) -> Collect<MapInit<Self, S, O>, ()>
     where
         O: Fn(&mut T, Self::Item) + Clone + Send + 'a,
@@ -203,13 +186,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::io::{self, Write};
     ///
     /// // This will stop iteration early if there's any write error, like
     /// // having piped output get closed on the other end.
-    /// (0..100).into_par_iter()
+    /// (0..100)
+    ///     .into_par_iter()
     ///     .try_for_each(|x| writeln!(io::stdout(), "{:?}", x))
+    ///     .exec_with(SimpleExecutor)
     ///     .expect("expected no write errors");
     /// ```
     fn try_for_each<O, T>(self, operation: O) -> TryForEach<Self, O>
@@ -232,13 +217,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
+    /// use asparit::*;
     /// use std::sync::mpsc::channel;
-    /// use rayon::prelude::*;
     ///
     /// let (sender, receiver) = channel();
     ///
-    /// (0..5).into_par_iter()
+    /// (0..5)
+    ///     .into_par_iter()
     ///     .try_for_each_with(sender, |s, x| s.send(x))
+    ///     .exec_with(SimpleExecutor)
     ///     .expect("expected no send errors");
     ///
     /// let mut res: Vec<_> = receiver.iter().collect();
@@ -264,27 +251,6 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// [`for_each_init()`]: #method.for_each_init
     /// [`try_for_each()`]: #method.try_for_each
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rand::Rng;
-    /// use rayon::prelude::*;
-    ///
-    /// let mut v = vec![0u8; 1_000_000];
-    ///
-    /// v.par_chunks_mut(1000)
-    ///     .try_for_each_init(
-    ///         || rand::thread_rng(),
-    ///         |rng, chunk| rng.try_fill(chunk),
-    ///     )
-    ///     .expect("expected no rand errors");
-    ///
-    /// // There's a remote chance that this will fail...
-    /// for i in 0u8..=255 {
-    ///     assert!(v.contains(&i));
-    /// }
-    /// ```
     fn try_for_each_init<O, S, T, U>(self, init: S, operation: O) -> TryForEachInit<Self, S, O>
     where
         O: Fn(&mut U, Self::Item) -> T + Clone + Send + 'a,
@@ -299,9 +265,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let count = (0..100).into_par_iter().count();
+    /// let count = (0..100).into_par_iter().count().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(count, 100);
     /// ```
@@ -315,11 +281,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let mut par_iter = (0..5).into_par_iter().map(|x| x * 2);
     ///
-    /// let doubles: Vec<_> = par_iter.collect();
+    /// let doubles: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -341,22 +307,23 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
+    /// use asparit::*;
     /// use std::sync::mpsc::channel;
-    /// use rayon::prelude::*;
     ///
     /// let (sender, receiver) = channel();
     ///
     /// let a: Vec<_> = (0..5)
-    ///     .into_par_iter()            // iterating over i32
+    ///     .into_par_iter() // iterating over i32
     ///     .map_with(sender, |s, x| {
-    ///         s.send(x).unwrap();     // sending i32 values through the channel
-    ///         x                       // returning i32
+    ///         s.send(x).unwrap(); // sending i32 values through the channel
+    ///         x // returning i32
     ///     })
-    ///     .collect();                 // collecting the returned values into a vector
+    ///     .collect() // collecting the returned values into a vector
+    ///     .exec_with(SimpleExecutor);
     ///
     /// let mut b: Vec<_> = receiver
-    ///     .iter()                     // iterating over the values in the channel
-    ///     .collect();                 // and collecting them
+    ///     .iter() // iterating over the values in the channel
+    ///     .collect(); // and collecting them
     /// b.sort();
     ///
     /// assert_eq!(a, b);
@@ -376,28 +343,6 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// The `init` function will be called only as needed for a value to be
     /// paired with the group of items in each rayon job.  There is no
     /// constraint on that returned type at all!
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rand::Rng;
-    /// use rayon::prelude::*;
-    ///
-    /// let a: Vec<_> = (1i32..1_000_000)
-    ///     .into_par_iter()
-    ///     .map_init(
-    ///         || rand::thread_rng(),  // get the thread-local RNG
-    ///         |rng, x| if rng.gen() { // randomly negate items
-    ///             -x
-    ///         } else {
-    ///             x
-    ///         },
-    ///     ).collect();
-    ///
-    /// // There's a remote chance that this will fail...
-    /// assert!(a.iter().any(|&x| x < 0));
-    /// assert!(a.iter().any(|&x| x > 0));
-    /// ```
     fn map_init<O, T, S, U>(self, init: S, operation: O) -> MapInit<Self, S, O>
     where
         O: Fn(&mut U, Self::Item) -> T + Send,
@@ -416,14 +361,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3];
     ///
-    /// let v_cloned: Vec<_> = a.par_iter().cloned().collect();
+    /// let v_cloned: Vec<_> = a.par_iter().cloned().collect().exec_with(SimpleExecutor);
     ///
     /// // cloned is the same as .map(|&x| x), for integers
-    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect();
+    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(v_cloned, vec![1, 2, 3]);
     /// assert_eq!(v_map, vec![1, 2, 3]);
@@ -445,14 +390,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3];
     ///
-    /// let v_copied: Vec<_> = a.par_iter().copied().collect();
+    /// let v_copied: Vec<_> = a.par_iter().copied().collect().exec_with(SimpleExecutor);
     ///
     /// // copied is the same as .map(|&x| x), for integers
-    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect();
+    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(v_copied, vec![1, 2, 3]);
     /// assert_eq!(v_map, vec![1, 2, 3]);
@@ -472,25 +417,29 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 4, 2, 3];
     ///
     /// // this iterator sequence is complex.
-    /// let sum = a.par_iter()
-    ///             .cloned()
-    ///             .filter(|&x| x % 2 == 0)
-    ///             .reduce(|| 0, |sum, i| sum + i);
+    /// let sum = a
+    ///     .par_iter()
+    ///     .cloned()
+    ///     .filter(|&x| x % 2 == 0)
+    ///     .reduce(|| 0, |sum, i| sum + i)
+    ///     .exec_with(SimpleExecutor);
     ///
     /// println!("{}", sum);
     ///
     /// // let's add some inspect() calls to investigate what's happening
-    /// let sum = a.par_iter()
-    ///             .cloned()
-    ///             .inspect(|x| println!("about to filter: {}", x))
-    ///             .filter(|&x| x % 2 == 0)
-    ///             .inspect(|x| println!("made it through filter: {}", x))
-    ///             .reduce(|| 0, |sum, i| sum + i);
+    /// let sum = a
+    ///     .par_iter()
+    ///     .cloned()
+    ///     .inspect(|x| println!("about to filter: {}", x))
+    ///     .filter(|&x| x % 2 == 0)
+    ///     .inspect(|x| println!("made it through filter: {}", x))
+    ///     .reduce(|| 0, |sum, i| sum + i)
+    ///     .exec_with(SimpleExecutor);
     ///
     /// println!("{}", sum);
     /// ```
@@ -506,11 +455,13 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let par_iter = (0..5).into_par_iter().update(|x| {*x *= 2;});
+    /// let par_iter = (0..5).into_par_iter().update(|x| {
+    ///     *x *= 2;
+    /// });
     ///
-    /// let doubles: Vec<_> = par_iter.collect();
+    /// let doubles: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -527,11 +478,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let mut par_iter = (0..10).into_par_iter().filter(|x| x % 2 == 0);
     ///
-    /// let even_numbers: Vec<_> = par_iter.collect();
+    /// let even_numbers: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&even_numbers[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -548,15 +499,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let mut par_iter = (0..10).into_par_iter()
-    ///                         .filter_map(|x| {
-    ///                             if x % 2 == 0 { Some(x * 3) }
-    ///                             else { None }
-    ///                         });
+    /// let mut par_iter =
+    ///     (0..10)
+    ///         .into_par_iter()
+    ///         .filter_map(|x| if x % 2 == 0 { Some(x * 3) } else { None });
     ///
-    /// let even_numbers: Vec<_> = par_iter.collect();
+    /// let even_numbers: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&even_numbers[..], &[0, 6, 12, 18, 24]);
     /// ```
@@ -590,7 +540,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::cell::RefCell;
     ///
     /// let a = [[1, 2], [3, 4], [5, 6], [7, 8]];
@@ -601,7 +551,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     std::iter::from_fn(move || cell_iter.borrow_mut().next())
     /// });
     ///
-    /// let vec: Vec<_> = par_iter.collect();
+    /// let vec: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&vec[..], &[1, 2, 3, 4, 5, 6, 7, 8]);
     /// ```
@@ -622,11 +572,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let x: Vec<Vec<_>> = vec![vec![1, 2], vec![3, 4]];
     /// let iters: Vec<_> = x.into_iter().map(Vec::into_iter).collect();
-    /// let y: Vec<_> = iters.into_par_iter().flatten_iter().collect();
+    /// let y: Vec<_> = iters
+    ///     .into_par_iter()
+    ///     .flatten_iter()
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(y, vec![1, 2, 3, 4]);
     /// ```
@@ -652,12 +606,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// // Iterate over a sequence of pairs `(x0, y0), ..., (xN, yN)`
     /// // and use reduce to compute one pair `(x0 + ... + xN, y0 + ... + yN)`
     /// // where the first/second elements are summed separately.
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// let sums = [(0, 1), (5, 6), (16, 2), (8, 9)]
-    ///            .par_iter()        // iterating over &(i32, i32)
-    ///            .cloned()          // iterating over (i32, i32)
-    ///            .reduce(|| (0, 0), // the "identity" is 0 in both columns
-    ///                    |a, b| (a.0 + b.0, a.1 + b.1));
+    ///     .par_iter() // iterating over &(i32, i32)
+    ///     .cloned() // iterating over (i32, i32)
+    ///     .reduce(
+    ///         || (0, 0), // the "identity" is 0 in both columns
+    ///         |a, b| (a.0 + b.0, a.1 + b.1),
+    ///     )
+    ///     .exec_with(SimpleExecutor);
     /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
     /// ```
     ///
@@ -687,12 +644,13 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// let sums = [(0, 1), (5, 6), (16, 2), (8, 9)]
-    ///            .par_iter()        // iterating over &(i32, i32)
-    ///            .cloned()          // iterating over (i32, i32)
-    ///            .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1))
-    ///            .unwrap();
+    ///     .par_iter() // iterating over &(i32, i32)
+    ///     .cloned() // iterating over (i32, i32)
+    ///     .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1))
+    ///     .exec_with(SimpleExecutor)
+    ///     .unwrap();
     /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
     /// ```
     ///
@@ -724,13 +682,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// // Compute the sum of squares, being careful about overflow.
-    /// fn sum_squares<I: IntoParallelIterator<Item = i32>>(iter: I) -> Option<i32> {
+    /// fn sum_squares<'a, I: IntoParallelIterator<'a, Item = i32>>(iter: I) -> Option<i32> {
     ///     iter.into_par_iter()
-    ///         .map(|i| i.checked_mul(i))            // square each item,
-    ///         .try_reduce(|| 0, i32::checked_add)   // and add them up!
+    ///         .map(|i| i.checked_mul(i)) // square each item,
+    ///         .try_reduce(|| 0, i32::checked_add) // and add them up!
+    ///         .exec_with(SimpleExecutor)
     /// }
     /// assert_eq!(sum_squares(0..5), Some(0 + 1 + 4 + 9 + 16));
     ///
@@ -771,16 +730,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let files = ["/dev/null", "/does/not/exist"];
     ///
     /// // Find the biggest file
-    /// files.into_par_iter()
+    /// files
+    ///     .into_par_iter()
     ///     .map(|path| std::fs::metadata(path).map(|m| (path, m.len())))
-    ///     .try_reduce_with(|a, b| {
-    ///         Ok(if a.1 >= b.1 { a } else { b })
-    ///     })
+    ///     .try_reduce_with(|a, b| Ok(if a.1 >= b.1 { a } else { b }))
+    ///     .exec_with(SimpleExecutor)
     ///     .expect("Some value, since the iterator is not empty")
     ///     .expect_err("not found");
     /// ```
@@ -866,14 +825,19 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// to use map/reduce, you might try this:
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let s =
-    ///     ['a', 'b', 'c', 'd', 'e']
+    /// let s = ['a', 'b', 'c', 'd', 'e']
     ///     .par_iter()
     ///     .map(|c: &char| format!("{}", c))
-    ///     .reduce(|| String::new(),
-    ///             |mut a: String, b: String| { a.push_str(&b); a });
+    ///     .reduce(
+    ///         || String::new(),
+    ///         |mut a: String, b: String| {
+    ///             a.push_str(&b);
+    ///             a
+    ///         },
+    ///     )
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(s, "abcde");
     /// ```
@@ -885,15 +849,25 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// do this instead:
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let s =
-    ///     ['a', 'b', 'c', 'd', 'e']
+    /// let s = ['a', 'b', 'c', 'd', 'e']
     ///     .par_iter()
-    ///     .fold(|| String::new(),
-    ///             |mut s: String, c: &char| { s.push(*c); s })
-    ///     .reduce(|| String::new(),
-    ///             |mut a: String, b: String| { a.push_str(&b); a });
+    ///     .fold(
+    ///         || String::new(),
+    ///         |mut s: String, c: &char| {
+    ///             s.push(*c);
+    ///             s
+    ///         },
+    ///     )
+    ///     .reduce(
+    ///         || String::new(),
+    ///         |mut a: String, b: String| {
+    ///             a.push_str(&b);
+    ///             a
+    ///         },
+    ///     )
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(s, "abcde");
     /// ```
@@ -916,12 +890,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// combination in effect:
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let bytes = 0..22_u8;
-    /// let sum = bytes.into_par_iter()
-    ///                .fold(|| 0_u32, |a: u32, b: u8| a + (b as u32))
-    ///                .sum::<u32>();
+    /// let sum = bytes
+    ///     .into_par_iter()
+    ///     .fold(|| 0_u32, |a: u32, b: u8| a + (b as u32))
+    ///     .sum::<u32>()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sum, (0..22).sum()); // compare to sequential
     /// ```
@@ -944,12 +920,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let bytes = 0..22_u8;
-    /// let sum = bytes.into_par_iter()
-    ///                .fold_with(0_u32, |a: u32, b: u8| a + (b as u32))
-    ///                .sum::<u32>();
+    /// let sum = bytes
+    ///     .into_par_iter()
+    ///     .fold_with(0_u32, |a: u32, b: u8| a + (b as u32))
+    ///     .sum::<u32>()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sum, (0..22).sum()); // compare to sequential
     /// ```
@@ -977,12 +955,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let bytes = 0..22_u8;
-    /// let sum = bytes.into_par_iter()
-    ///                .try_fold(|| 0_u32, |a: u32, b: u8| a.checked_add(b as u32))
-    ///                .try_reduce(|| 0, u32::checked_add);
+    /// let sum = bytes
+    ///     .into_par_iter()
+    ///     .try_fold(|| 0_u32, |a: u32, b: u8| a.checked_add(b as u32))
+    ///     .try_reduce(|| 0, u32::checked_add)
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
     /// ```
@@ -1004,12 +984,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// [`try_fold()`]: #method.try_fold
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let bytes = 0..22_u8;
-    /// let sum = bytes.into_par_iter()
-    ///                .try_fold_with(0_u32, |a: u32, b: u8| a.checked_add(b as u32))
-    ///                .try_reduce(|| 0, u32::checked_add);
+    /// let sum = bytes
+    ///     .into_par_iter()
+    ///     .try_fold_with(0_u32, |a: u32, b: u8| a.checked_add(b as u32))
+    ///     .try_reduce(|| 0, u32::checked_add)
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
     /// ```
@@ -1038,11 +1020,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 5, 7];
     ///
-    /// let sum: i32 = a.par_iter().sum();
+    /// let sum: i32 = a.par_iter().sum().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sum, 13);
     /// ```
@@ -1069,10 +1051,13 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// fn factorial(n: u32) -> u32 {
-    ///    (1..n+1).into_par_iter().product()
+    ///     (1..n + 1)
+    ///         .into_par_iter()
+    ///         .product()
+    ///         .exec_with(SimpleExecutor)
     /// }
     ///
     /// assert_eq!(factorial(0), 1);
@@ -1099,15 +1084,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [45, 74, 32];
     ///
-    /// assert_eq!(a.par_iter().min(), Some(&32));
+    /// assert_eq!(a.par_iter().min().exec_with(SimpleExecutor), Some(&32));
     ///
     /// let b: [i32; 0] = [];
     ///
-    /// assert_eq!(b.par_iter().min(), None);
+    /// assert_eq!(b.par_iter().min().exec_with(SimpleExecutor), None);
     /// ```
     fn min(self) -> Min<Self>
     where
@@ -1127,11 +1112,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [-3_i32, 77, 53, 240, -1];
     ///
-    /// assert_eq!(a.par_iter().min_by(|x, y| x.cmp(y)), Some(&-3));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .min_by(|x, y| x.cmp(y))
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&-3)
+    /// );
     /// ```
     fn min_by<O>(self, operation: O) -> MinBy<Self, O>
     where
@@ -1151,11 +1141,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
     ///
-    /// assert_eq!(a.par_iter().min_by_key(|x| x.abs()), Some(&2));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .min_by_key(|x| x.abs())
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&2)
+    /// );
     /// ```
     fn min_by_key<O, K>(self, operation: O) -> MinByKey<Self, O>
     where
@@ -1178,15 +1173,15 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [45, 74, 32];
     ///
-    /// assert_eq!(a.par_iter().max(), Some(&74));
+    /// assert_eq!(a.par_iter().max().exec_with(SimpleExecutor), Some(&74));
     ///
     /// let b: [i32; 0] = [];
     ///
-    /// assert_eq!(b.par_iter().max(), None);
+    /// assert_eq!(b.par_iter().max().exec_with(SimpleExecutor), None);
     /// ```
     fn max(self) -> Max<Self>
     where
@@ -1206,11 +1201,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [-3_i32, 77, 53, 240, -1];
     ///
-    /// assert_eq!(a.par_iter().max_by(|x, y| x.abs().cmp(&y.abs())), Some(&240));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .max_by(|x, y| x.abs().cmp(&y.abs()))
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&240)
+    /// );
     /// ```
     fn max_by<O>(self, operation: O) -> MaxBy<Self, O>
     where
@@ -1230,11 +1230,16 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
     ///
-    /// assert_eq!(a.par_iter().max_by_key(|x| x.abs()), Some(&34));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .max_by_key(|x| x.abs())
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&34)
+    /// );
     /// ```
     fn max_by_key<O, K>(self, operation: O) -> MaxByKey<Self, O>
     where
@@ -1249,14 +1254,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [0, 1, 2];
     /// let b = [9, 8, 7];
     ///
     /// let par_iter = a.par_iter().chain(b.par_iter());
     ///
-    /// let chained: Vec<_> = par_iter.cloned().collect();
+    /// let chained: Vec<_> = par_iter.cloned().collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(&chained[..], &[0, 1, 2, 9, 8, 7]);
     /// ```
@@ -1282,13 +1287,23 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(a.par_iter().find_any(|&&x| x == 3), Some(&3));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_any(|&&x| x == 3)
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&3)
+    /// );
     ///
-    /// assert_eq!(a.par_iter().find_any(|&&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_any(|&&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn find_any<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1312,13 +1327,23 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(a.par_iter().find_first(|&&x| x == 3), Some(&3));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_first(|&&x| x == 3)
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&3)
+    /// );
     ///
-    /// assert_eq!(a.par_iter().find_first(|&&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_first(|&&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn find_first<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1341,13 +1366,23 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(a.par_iter().find_last(|&&x| x == 3), Some(&3));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_last(|&&x| x == 3)
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(&3)
+    /// );
     ///
-    /// assert_eq!(a.par_iter().find_last(|&&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .find_last(|&&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn find_last<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1371,11 +1406,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let c = ["lol", "NaN", "5", "5"];
     ///
-    /// let found_number = c.par_iter().find_map_any(|s| s.parse().ok());
+    /// let found_number = c
+    ///     .par_iter()
+    ///     .find_map_any(|s| s.parse().ok())
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(found_number, Some(5));
     /// ```
@@ -1402,11 +1440,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let c = ["lol", "NaN", "2", "5"];
     ///
-    /// let first_number = c.par_iter().find_map_first(|s| s.parse().ok());
+    /// let first_number = c
+    ///     .par_iter()
+    ///     .find_map_first(|s| s.parse().ok())
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(first_number, Some(2));
     /// ```
@@ -1433,11 +1474,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let c = ["lol", "NaN", "2", "5"];
     ///
-    /// let last_number = c.par_iter().find_map_last(|s| s.parse().ok());
+    /// let last_number = c
+    ///     .par_iter()
+    ///     .find_map_last(|s| s.parse().ok())
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(last_number, Some(5));
     /// ```
@@ -1458,11 +1502,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [0, 12, 3, 4, 0, 23, 0];
     ///
-    /// let is_valid = a.par_iter().any(|&x| x > 10);
+    /// let is_valid = a.par_iter().any(|&x| x > 10).exec_with(SimpleExecutor);
     ///
     /// assert!(is_valid);
     /// ```
@@ -1480,11 +1524,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [0, 12, 3, 4, 0, 23, 0];
     ///
-    /// let is_valid = a.par_iter().all(|&x| x > 10);
+    /// let is_valid = a.par_iter().all(|&x| x > 10).exec_with(SimpleExecutor);
     ///
     /// assert!(!is_valid);
     /// ```
@@ -1501,20 +1545,25 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::sync::atomic::{AtomicUsize, Ordering};
     ///
     /// let counter = AtomicUsize::new(0);
     /// let value = (0_i32..2048)
     ///     .into_par_iter()
     ///     .map(|x| {
-    ///              counter.fetch_add(1, Ordering::SeqCst);
-    ///              if x < 1024 { Some(x) } else { None }
-    ///          })
+    ///         counter.fetch_add(1, Ordering::SeqCst);
+    ///         if x < 1024 {
+    ///             Some(x)
+    ///         } else {
+    ///             None
+    ///         }
+    ///     })
     ///     .while_some()
-    ///     .max();
+    ///     .max()
+    ///     .exec_with(SimpleExecutor);
     ///
-    /// assert!(value = Some(1023));
+    /// assert!(value == Some(1023));
     /// assert!(counter.load(Ordering::SeqCst) < 2048); // should not have visited every single one
     /// ```
     fn while_some<T>(self) -> WhileSome<Self>
@@ -1543,7 +1592,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// panic is finally propagated.
     ///
     /// ```should_panic
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::{thread, time};
     ///
     /// (0..1_000_000)
@@ -1553,7 +1602,8 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         // simulate some work
     ///         thread::sleep(time::Duration::from_secs(1));
     ///         assert!(i > 0); // oops!
-    ///     });
+    ///     })
+    ///     .exec_with(SimpleExecutor);
     /// ```
     fn panic_fuse(self) -> PanicFuse<Self> {
         PanicFuse::new(self)
@@ -1575,11 +1625,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let sync_vec: Vec<_> = (0..100).into_iter().collect();
     ///
-    /// let async_vec: Vec<_> = (0..100).into_par_iter().collect();
+    /// let async_vec: Vec<_> = (0..100).into_par_iter().collect().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(sync_vec, async_vec);
     /// ```
@@ -1601,11 +1651,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [(0, 1), (1, 2), (2, 3), (3, 4)];
     ///
-    /// let (left, right): (Vec<_>, Vec<_>) = a.par_iter().cloned().unzip();
+    /// let (left, right): (Vec<_>, Vec<_>) = a.par_iter().cloned().unzip().exec_with(SimpleExecutor);
     ///
     /// assert_eq!(left, [0, 1, 2, 3]);
     /// assert_eq!(right, [1, 2, 3, 4]);
@@ -1614,11 +1664,13 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// Nested pairs can be unzipped too.
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let (values, squares, cubes): (Vec<_>, Vec<_>, Vec<_>) = (0..4).into_par_iter()
+    /// let (values, squares, cubes): (Vec<_>, Vec<_>, Vec<_>) = (0..4)
+    ///     .into_par_iter()
     ///     .map(|i| (i, i * i, i * i * i))
-    ///     .unzip();
+    ///     .unzip()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(values, [0, 1, 2, 3]);
     /// assert_eq!(squares, [0, 1, 4, 9]);
@@ -1640,9 +1692,12 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let (left, right): (Vec<_>, Vec<_>) = (0..8).into_par_iter().partition(|x| x % 2 == 0);
+    /// let (left, right): (Vec<_>, Vec<_>) = (0..8)
+    ///     .into_par_iter()
+    ///     .partition(|x| x % 2 == 0)
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(left, [0, 2, 4, 6]);
     /// assert_eq!(right, [1, 3, 5, 7]);
@@ -1661,17 +1716,18 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
-    /// use rayon::iter::Either;
+    /// use asparit::*;
     ///
-    /// let (left, right): (Vec<_>, Vec<_>) = (0..8).into_par_iter()
+    /// let (left, right): (Vec<_>, Vec<_>) = (0..8)
+    ///     .into_par_iter()
     ///     .partition_map(|x| {
     ///         if x % 2 == 0 {
-    ///             Either::Left(x * 4)
+    ///             (Some(x * 4), None)
     ///         } else {
-    ///             Either::Right(x * 3)
+    ///             (None, Some(x * 3))
     ///         }
-    ///     });
+    ///     })
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(left, [0, 8, 16, 24]);
     /// assert_eq!(right, [3, 9, 15, 21]);
@@ -1680,17 +1736,17 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// Nested `Either` enums can be split as well.
     ///
     /// ```
-    /// use rayon::prelude::*;
-    /// use rayon::iter::Either::*;
+    /// use asparit::*;
     ///
-    /// let ((fizzbuzz, fizz), (buzz, other)): ((Vec<_>, Vec<_>), (Vec<_>, Vec<_>)) = (1..20)
+    /// let (fizzbuzz, fizz, buzz, other): (Vec<_>, Vec<_>, Vec<_>, Vec<_>) = (1..20)
     ///     .into_par_iter()
     ///     .partition_map(|x| match (x % 3, x % 5) {
-    ///         (0, 0) => Left(Left(x)),
-    ///         (0, _) => Left(Right(x)),
-    ///         (_, 0) => Right(Left(x)),
-    ///         (_, _) => Right(Right(x)),
-    ///     });
+    ///         (0, 0) => (Some(x), None, None, None),
+    ///         (0, _) => (None, Some(x), None, None),
+    ///         (_, 0) => (None, None, Some(x), None),
+    ///         (_, _) => (None, None, None, Some(x)),
+    ///     })
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(fizzbuzz, [15]);
     /// assert_eq!(fizz, [3, 6, 9, 12, 18]);
@@ -1706,10 +1762,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let x = vec![1, 2, 3];
-    /// let r: Vec<_> = x.into_par_iter().intersperse(-1).collect();
+    /// let r: Vec<_> = x
+    ///     .into_par_iter()
+    ///     .intersperse(-1)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(r, vec![1, -1, 2, -1, 3]);
     /// ```
@@ -1725,15 +1785,13 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
-    /// let min = (0..1_000_000)
+    /// (0..1_000_000)
     ///     .into_par_iter()
     ///     .with_splits(8)
-    ///     .for_each(|| println!("Thread ID: {:?}", std::thread::current().id))
-    ///     .exec();
-    ///
-    /// assert!(min >= 1234);
+    ///     .for_each(|_| println!("Thread ID: {:?}", std::thread::current().id()))
+    ///     .exec_with(SimpleExecutor);
     /// ```
     fn with_splits(self, splits: usize) -> SetupIter<Self> {
         SetupIter::new(
@@ -1782,9 +1840,9 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// use asparit::*;
     ///
     /// let par_iter = (0..100).into_par_iter().zip(vec![0; 10]);
-    /// assert_eq!(par_iter.len(), 10);
+    /// assert_eq!(par_iter.len_hint(), 10);
     ///
-    /// let vec: Vec<_> = par_iter.collect();
+    /// let vec: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
     /// assert_eq!(vec.len(), 10);
     /// ```
     fn len_hint(&self) -> usize;
@@ -1798,12 +1856,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let result: Vec<_> = (1..4)
     ///     .into_par_iter()
     ///     .zip(vec!['a', 'b', 'c'])
-    ///     .collect();
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [(1, 'a'), (2, 'b'), (3, 'c')]);
     /// ```
@@ -1821,7 +1880,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// Will panic if `self` and `other` are not the same length.
     ///
     /// ```should_panic
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let one = [1u8];
     /// let two = [2u8, 2];
@@ -1829,7 +1888,10 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// let two_iter = two.par_iter();
     ///
     /// // this will panic
-    /// let zipped: Vec<(&u8, &u8)> = one_iter.zip_eq(two_iter).collect();
+    /// let zipped: Vec<(&u8, &u8)> = one_iter
+    ///     .zip_eq(two_iter)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// // we should never get here
     /// assert_eq!(1, zipped.len());
@@ -1859,9 +1921,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// let (x, y) = (vec![1, 2], vec![3, 4, 5, 6]);
-    /// let r: Vec<i32> = x.into_par_iter().interleave(y).collect();
+    /// let r: Vec<i32> = x
+    ///     .into_par_iter()
+    ///     .interleave(y)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     /// assert_eq!(r, vec![1, 3, 2, 4, 5, 6]);
     /// ```
     fn interleave<X>(self, other: X) -> Interleave<Self, X::Iter>
@@ -1878,9 +1944,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// let (x, y) = (vec![1, 2, 3, 4], vec![5, 6]);
-    /// let r: Vec<i32> = x.into_par_iter().interleave_shortest(y).collect();
+    /// let r: Vec<i32> = x
+    ///     .into_par_iter()
+    ///     .interleave_shortest(y)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     /// assert_eq!(r, vec![1, 5, 2, 6, 3]);
     /// ```
     fn interleave_shortest<X, I>(self, other: X) -> Interleave<Take<Self>, Take<X::Iter>>
@@ -1918,10 +1988,17 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// let a = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    /// let r: Vec<Vec<i32>> = a.into_par_iter().chunks(3).collect();
-    /// assert_eq!(r, vec![vec![1,2,3], vec![4,5,6], vec![7,8,9], vec![10]]);
+    /// let r: Vec<Vec<i32>> = a
+    ///     .into_par_iter()
+    ///     .chunks(3)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
+    /// assert_eq!(
+    ///     r,
+    ///     vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9], vec![10]]
+    /// );
     /// ```
     fn chunks(self, chunk_size: usize) -> Chunks<Self> {
         assert!(chunk_size != 0, "chunk_size must not be zero");
@@ -1935,13 +2012,22 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::cmp::Ordering::*;
     ///
     /// let x = vec![1, 2, 3];
-    /// assert_eq!(x.par_iter().cmp(&vec![1, 3, 0]), Less);
-    /// assert_eq!(x.par_iter().cmp(&vec![1, 2, 3]), Equal);
-    /// assert_eq!(x.par_iter().cmp(&vec![1, 2]), Greater);
+    /// assert_eq!(
+    ///     x.par_iter().cmp(&vec![1, 3, 0]).exec_with(SimpleExecutor),
+    ///     Less
+    /// );
+    /// assert_eq!(
+    ///     x.par_iter().cmp(&vec![1, 2, 3]).exec_with(SimpleExecutor),
+    ///     Equal
+    /// );
+    /// assert_eq!(
+    ///     x.par_iter().cmp(&vec![1, 2]).exec_with(SimpleExecutor),
+    ///     Greater
+    /// );
     /// ```
     fn cmp<X>(self, other: X) -> Cmp<Self, X::Iter>
     where
@@ -1958,15 +2044,35 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     /// use std::cmp::Ordering::*;
     /// use std::f64::NAN;
     ///
     /// let x = vec![1.0, 2.0, 3.0];
-    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 3.0, 0.0]), Some(Less));
-    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 2.0, 3.0]), Some(Equal));
-    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, 2.0]), Some(Greater));
-    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, NAN]), None);
+    /// assert_eq!(
+    ///     x.par_iter()
+    ///         .partial_cmp(&vec![1.0, 3.0, 0.0])
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(Less)
+    /// );
+    /// assert_eq!(
+    ///     x.par_iter()
+    ///         .partial_cmp(&vec![1.0, 2.0, 3.0])
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(Equal)
+    /// );
+    /// assert_eq!(
+    ///     x.par_iter()
+    ///         .partial_cmp(&vec![1.0, 2.0])
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(Greater)
+    /// );
+    /// assert_eq!(
+    ///     x.par_iter()
+    ///         .partial_cmp(&vec![1.0, NAN])
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn partial_cmp<X>(self, other: X) -> PartialCmp<Self, X::Iter>
     where
@@ -2058,13 +2164,14 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let chars = vec!['a', 'b', 'c'];
     /// let result: Vec<_> = chars
     ///     .into_par_iter()
     ///     .enumerate()
-    ///     .collect();
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [(0, 'a'), (1, 'b'), (2, 'c')]);
     /// ```
@@ -2077,13 +2184,14 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    ///use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let range = (3..10);
     /// let result: Vec<i32> = range
-    ///    .into_par_iter()
-    ///    .step_by(3)
-    ///    .collect();
+    ///     .into_par_iter()
+    ///     .step_by(3)
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [3, 6, 9])
     /// ```
@@ -2096,12 +2204,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let result: Vec<_> = (0..100)
     ///     .into_par_iter()
     ///     .skip(95)
-    ///     .collect();
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [95, 96, 97, 98, 99]);
     /// ```
@@ -2114,12 +2223,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let result: Vec<_> = (0..100)
     ///     .into_par_iter()
     ///     .take(5)
-    ///     .collect();
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [0, 1, 2, 3, 4]);
     /// ```
@@ -2136,14 +2246,23 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// let i = a.par_iter().position_any(|&x| x == 3).expect("found");
+    /// let i = a
+    ///     .par_iter()
+    ///     .position_any(|&x| x == 3)
+    ///     .exec_with(SimpleExecutor)
+    ///     .expect("found");
     /// assert!(i == 2 || i == 3);
     ///
-    /// assert_eq!(a.par_iter().position_any(|&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .position_any(|&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn position_any<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2168,13 +2287,23 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(a.par_iter().position_first(|&x| x == 3), Some(2));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .position_first(|&x| x == 3)
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(2)
+    /// );
     ///
-    /// assert_eq!(a.par_iter().position_first(|&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .position_first(|&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn position_first<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2199,13 +2328,23 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(a.par_iter().position_last(|&x| x == 3), Some(3));
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .position_last(|&x| x == 3)
+    ///         .exec_with(SimpleExecutor),
+    ///     Some(3)
+    /// );
     ///
-    /// assert_eq!(a.par_iter().position_last(|&x| x == 100), None);
+    /// assert_eq!(
+    ///     a.par_iter()
+    ///         .position_last(|&x| x == 100)
+    ///         .exec_with(SimpleExecutor),
+    ///     None
+    /// );
     /// ```
     fn position_last<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2220,12 +2359,13 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let result: Vec<_> = (0..5)
     ///     .into_par_iter()
     ///     .rev()
-    ///     .collect();
+    ///     .collect()
+    ///     .exec_with(SimpleExecutor);
     ///
     /// assert_eq!(result, [4, 3, 2, 1, 0]);
     /// ```
@@ -2245,13 +2385,15 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let min = (0..1_000_000)
     ///     .into_par_iter()
     ///     .with_min_len(1234)
     ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
-    ///     .min().unwrap();
+    ///     .min()
+    ///     .exec_with(SimpleExecutor)
+    ///     .unwrap();
     ///
     /// assert!(min >= 1234);
     /// ```
@@ -2279,15 +2421,15 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// # Examples
     ///
     /// ```
-    /// use rayon::prelude::*;
+    /// use asparit::*;
     ///
     /// let max = (0..1_000_000)
     ///     .into_par_iter()
     ///     .with_max_len(1234)
     ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
-    ///     .max().unwrap();
-    ///
-    /// assert!(max <= 1234);
+    ///     .max()
+    ///     .exec_with(SimpleExecutor)
+    ///     .unwrap();
     /// ```
     fn with_max_len(self, max: usize) -> SetupIter<Self> {
         SetupIter::new(

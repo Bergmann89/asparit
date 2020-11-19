@@ -11,4 +11,4 @@ pub use self::core::{
     ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
     WithIndexedProducer, WithProducer, WithSetup,
 };
-pub use self::executor::{DefaultExecutor, SequentialExecutor};
+pub use self::executor::{DefaultExecutor, SimpleExecutor, TokioExecutor};

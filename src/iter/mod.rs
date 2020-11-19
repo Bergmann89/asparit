@@ -39,34 +39,3 @@ pub mod unzip;
 pub mod update;
 pub mod while_some;
 pub mod zip;
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_for_each() {
-        let x: Vec<usize> = vec![0usize, 1, 2, 3, 4, 5]
-            .into_par_iter()
-            .rev()
-            .collect()
-            .exec()
-            .await;
-
-        dbg!(x);
-    }
-
-    #[tokio::test]
-    async fn test_reduce() {
-        let x = (0..10usize)
-            .into_par_iter()
-            .map::<_, Result<usize, ()>>(Ok)
-            .try_reduce(|| 0, |a, b| Ok(a + b))
-            .exec()
-            .await;
-
-        dbg!(&x);
-
-        assert_eq!(Ok(45), x);
-    }
-}

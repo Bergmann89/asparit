@@ -15,25 +15,40 @@ use super::{Executor, IntoParallelIterator};
 /// Implementing `FromParallelIterator` for your type:
 ///
 /// ```
-/// use rayon::prelude::*;
+/// use asparit::*;
 /// use std::mem;
 ///
 /// struct BlackHole {
 ///     mass: usize,
 /// }
 ///
-/// impl<T: Send> FromParallelIterator<T> for BlackHole {
-///     fn from_par_iter<I>(iterator: I) -> Self
-///         where I: IntoParallelIterator<Item = T>
+/// impl<'a, I> FromParallelIterator<'a, I> for BlackHole
+/// where
+///     I: Send + 'a,
+/// {
+///     type ExecutorItem2 = usize;
+///     type ExecutorItem3 = ();
+///
+///     fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
+///     where
+///         E: Executor<'a, Self, Self::ExecutorItem2, Self::ExecutorItem3>,
+///         X: IntoParallelIterator<'a, Item = I>,
 ///     {
 ///         let iterator = iterator.into_par_iter();
-///         BlackHole {
-///             mass: iterator.count() * mem::size_of::<T>(),
-///         }
+///         let executor = executor.into_inner();
+///
+///         let ret = iterator.count().exec_with(executor);
+///
+///         E::map(ret, |count| BlackHole {
+///             mass: count * std::mem::size_of::<I>(),
+///         })
 ///     }
 /// }
 ///
-/// let bh: BlackHole = (0i32..1000).into_par_iter().collect();
+/// let bh: BlackHole = (0i32..1000)
+///     .into_par_iter()
+///     .collect()
+///     .exec_with(SimpleExecutor);
 /// assert_eq!(bh.mass, 4000);
 /// ```
 pub trait FromParallelIterator<'a, I>: Send + Sized

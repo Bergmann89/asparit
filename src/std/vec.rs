@@ -27,21 +27,21 @@ where
     }
 }
 
-impl<'a, I> ParallelExtend<'a, I, VecExtendResult<I>> for Vec<I>
+impl<'a, V> ParallelExtend<'a, V::Item, VecExtendResult<V>> for V
 where
-    I: Send + 'a,
+    V: VecLike + Send + 'a,
 {
-    type Consumer = VecConsumer<I>;
+    type Consumer = VecConsumer<V>;
 
     fn into_consumer(self) -> Self::Consumer {
         VecConsumer { vec: Some(self) }
     }
 
-    fn map_result(inner: VecExtendResult<I>) -> Self {
+    fn map_result(inner: VecExtendResult<V>) -> Self {
         let mut vec = inner.vec.unwrap();
 
-        for mut items in inner.items {
-            vec.append(&mut items);
+        for items in inner.items {
+            vec.append(items);
         }
 
         vec
@@ -52,12 +52,12 @@ impl<'a, I> FromParallelIterator<'a, I> for Vec<I>
 where
     I: Send + 'a,
 {
-    type ExecutorItem2 = VecExtendResult<I>;
+    type ExecutorItem2 = VecExtendResult<Vec<I>>;
     type ExecutorItem3 = ();
 
     fn from_par_iter<E, X>(executor: E, iterator: X) -> E::Result
     where
-        E: Executor<'a, Self, VecExtendResult<I>>,
+        E: Executor<'a, Self, VecExtendResult<Vec<I>>>,
         X: IntoParallelIterator<'a, Item = I>,
     {
         let result = Self::default();
@@ -540,19 +540,19 @@ impl<'a, T, C> FusedIterator for SliceIter<'a, T, C> {}
 
 /* VecConsumer */
 
-pub struct VecConsumer<T> {
-    vec: Option<Vec<T>>,
+pub struct VecConsumer<V> {
+    vec: Option<V>,
 }
 
-impl<T> WithSetup for VecConsumer<T> {}
+impl<V> WithSetup for VecConsumer<V> {}
 
-impl<T> Consumer<T> for VecConsumer<T>
+impl<V> Consumer<V::Item> for VecConsumer<V>
 where
-    T: Send,
+    V: VecLike + Send,
 {
-    type Folder = VecFolder<T>;
+    type Folder = VecFolder<V>;
     type Reducer = VecReducer;
-    type Result = VecExtendResult<T>;
+    type Result = VecExtendResult<V>;
 
     fn split(self) -> (Self, Self, Self::Reducer) {
         let left = VecConsumer { vec: self.vec };
@@ -580,15 +580,18 @@ where
 
 /* VecFolder */
 
-pub struct VecFolder<T> {
-    vec: Option<Vec<T>>,
-    items: Vec<T>,
+pub struct VecFolder<V: VecLike> {
+    vec: Option<V>,
+    items: Vec<V::Item>,
 }
 
-impl<T> Folder<T> for VecFolder<T> {
-    type Result = VecExtendResult<T>;
+impl<V> Folder<V::Item> for VecFolder<V>
+where
+    V: VecLike,
+{
+    type Result = VecExtendResult<V>;
 
-    fn consume(mut self, item: T) -> Self {
+    fn consume(mut self, item: V::Item) -> Self {
         self.items.push(item);
 
         self
@@ -596,7 +599,7 @@ impl<T> Folder<T> for VecFolder<T> {
 
     fn consume_iter<X>(mut self, iter: X) -> Self
     where
-        X: IntoIterator<Item = T>,
+        X: IntoIterator<Item = V::Item>,
     {
         self.items.extend(iter);
 
@@ -622,8 +625,11 @@ impl<T> Folder<T> for VecFolder<T> {
 
 pub struct VecReducer;
 
-impl<T> Reducer<VecExtendResult<T>> for VecReducer {
-    fn reduce(self, left: VecExtendResult<T>, mut right: VecExtendResult<T>) -> VecExtendResult<T> {
+impl<V> Reducer<VecExtendResult<V>> for VecReducer
+where
+    V: VecLike,
+{
+    fn reduce(self, left: VecExtendResult<V>, mut right: VecExtendResult<V>) -> VecExtendResult<V> {
         let mut items = left.items;
         items.append(&mut right.items);
 
@@ -635,7 +641,37 @@ impl<T> Reducer<VecExtendResult<T>> for VecReducer {
 
 /* VecExtendResult */
 
-pub struct VecExtendResult<T> {
-    vec: Option<Vec<T>>,
-    items: LinkedList<Vec<T>>,
+pub struct VecExtendResult<V: VecLike> {
+    vec: Option<V>,
+    items: LinkedList<Vec<V::Item>>,
+}
+
+/* VecLike */
+
+pub trait VecLike {
+    type Item: Send;
+
+    fn append(&mut self, items: Vec<Self::Item>);
+}
+
+impl<I> VecLike for Vec<I>
+where
+    I: Send,
+{
+    type Item = I;
+
+    fn append(&mut self, mut items: Vec<I>) {
+        Vec::append(self, &mut items);
+    }
+}
+
+impl<'a, I> VecLike for &'a mut Vec<I>
+where
+    I: Send,
+{
+    type Item = I;
+
+    fn append(&mut self, mut items: Vec<I>) {
+        Vec::append(self, &mut items);
+    }
 }
