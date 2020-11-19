@@ -14,6 +14,7 @@ use crate::{
         collect::Collect,
         copied::Copied,
         count::Count,
+        enumerate::Enumerate,
         filter::Filter,
         filter_map::FilterMap,
         find::{All, Any, Find, FindMap, FindMatch},
@@ -2039,6 +2040,25 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
             Ordering::Greater,
             Some(Ordering::Equal),
         )
+    }
+
+    /// Yields an index along with each item.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let chars = vec!['a', 'b', 'c'];
+    /// let result: Vec<_> = chars
+    ///     .into_par_iter()
+    ///     .enumerate()
+    ///     .collect();
+    ///
+    /// assert_eq!(result, [(0, 'a'), (1, 'b'), (2, 'c')]);
+    /// ```
+    fn enumerate(self) -> Enumerate<Self> {
+        Enumerate::new(self)
     }
 
     /// Creates an iterator that yields the first `n` elements.

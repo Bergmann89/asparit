@@ -5,6 +5,7 @@ pub mod cmp;
 pub mod collect;
 pub mod copied;
 pub mod count;
+pub mod enumerate;
 pub mod filter;
 pub mod filter_map;
 pub mod find;
@@ -43,8 +44,10 @@ mod tests {
     async fn test_for_each() {
         let x = vec![0usize, 1, 2, 3, 4]
             .into_par_iter()
-            .with_splits(1)
-            .lt(vec![0usize, 1, 2, 3, 4, 5])
+            .enumerate()
+            .for_each(|x| {
+                dbg!(x);
+            })
             .exec()
             .await;
 
