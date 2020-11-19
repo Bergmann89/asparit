@@ -4,18 +4,18 @@ use crate::{
     WithProducer, WithSetup,
 };
 
-pub struct Splits<X> {
+pub struct SetupIter<X> {
     base: X,
-    splits: usize,
+    setup: Setup,
 }
 
-impl<X> Splits<X> {
-    pub fn new(base: X, splits: usize) -> Self {
-        Self { base, splits }
+impl<X> SetupIter<X> {
+    pub fn new(base: X, setup: Setup) -> Self {
+        Self { base, setup }
     }
 }
 
-impl<'a, X> ParallelIterator<'a> for Splits<X>
+impl<'a, X> ParallelIterator<'a> for SetupIter<X>
 where
     X: ParallelIterator<'a>,
 {
@@ -28,8 +28,8 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        let splits = self.splits;
-        let consumer = SplitsConsumer { base, splits };
+        let setup = self.setup;
+        let consumer = SetupIterConsumer { base, setup };
 
         self.base.drive(executor, consumer)
     }
@@ -39,7 +39,7 @@ where
     }
 }
 
-impl<'a, X> IndexedParallelIterator<'a> for Splits<X>
+impl<'a, X> IndexedParallelIterator<'a> for SetupIter<X>
 where
     X: IndexedParallelIterator<'a>,
 {
@@ -50,8 +50,8 @@ where
         D: Send + 'a,
         R: Reducer<D> + Send + 'a,
     {
-        let splits = self.splits;
-        let consumer = SplitsConsumer { base, splits };
+        let setup = self.setup;
+        let consumer = SetupIterConsumer { base, setup };
 
         self.base.drive_indexed(executor, consumer)
     }
@@ -61,7 +61,7 @@ where
     }
 }
 
-impl<'a, X> WithProducer<'a> for Splits<X>
+impl<'a, X> WithProducer<'a> for SetupIter<X>
 where
     X: WithProducer<'a>,
 {
@@ -71,13 +71,13 @@ where
     where
         CB: ProducerCallback<'a, Self::Item>,
     {
-        let splits = self.splits;
+        let setup = self.setup;
 
-        self.base.with_producer(SplitsCallback { base, splits })
+        self.base.with_producer(SetupIterCallback { base, setup })
     }
 }
 
-impl<'a, X> WithIndexedProducer<'a> for Splits<X>
+impl<'a, X> WithIndexedProducer<'a> for SetupIter<X>
 where
     X: WithIndexedProducer<'a>,
 {
@@ -87,21 +87,21 @@ where
     where
         CB: IndexedProducerCallback<'a, Self::Item>,
     {
-        let splits = self.splits;
+        let setup = self.setup;
 
         self.base
-            .with_indexed_producer(SplitsCallback { base, splits })
+            .with_indexed_producer(SetupIterCallback { base, setup })
     }
 }
 
-/* SplitsCallback */
+/* SetupIterCallback */
 
-struct SplitsCallback<CB> {
+struct SetupIterCallback<CB> {
     base: CB,
-    splits: usize,
+    setup: Setup,
 }
 
-impl<'a, CB, I> ProducerCallback<'a, I> for SplitsCallback<CB>
+impl<'a, CB, I> ProducerCallback<'a, I> for SetupIterCallback<CB>
 where
     CB: ProducerCallback<'a, I>,
 {
@@ -111,13 +111,13 @@ where
     where
         P: Producer<Item = I> + 'a,
     {
-        let splits = self.splits;
+        let setup = self.setup;
 
-        self.base.callback(SplitsProducer { base, splits })
+        self.base.callback(SetupIterProducer { base, setup })
     }
 }
 
-impl<'a, CB, I> IndexedProducerCallback<'a, I> for SplitsCallback<CB>
+impl<'a, CB, I> IndexedProducerCallback<'a, I> for SetupIterCallback<CB>
 where
     CB: IndexedProducerCallback<'a, I>,
 {
@@ -127,32 +127,29 @@ where
     where
         P: IndexedProducer<Item = I> + 'a,
     {
-        let splits = self.splits;
+        let setup = self.setup;
 
-        self.base.callback(SplitsProducer { base, splits })
+        self.base.callback(SetupIterProducer { base, setup })
     }
 }
 
-/* SplitsProducer */
+/* SetupIterProducer */
 
-struct SplitsProducer<P> {
+struct SetupIterProducer<P> {
     base: P,
-    splits: usize,
+    setup: Setup,
 }
 
-impl<P> WithSetup for SplitsProducer<P>
+impl<P> WithSetup for SetupIterProducer<P>
 where
     P: WithSetup,
 {
     fn setup(&self) -> Setup {
-        self.base.setup().merge(Setup {
-            splits: Some(self.splits),
-            ..Default::default()
-        })
+        self.base.setup().merge(self.setup.clone())
     }
 }
 
-impl<P> Producer for SplitsProducer<P>
+impl<P> Producer for SetupIterProducer<P>
 where
     P: Producer,
 {
@@ -164,11 +161,14 @@ where
     }
 
     fn split(self) -> (Self, Option<Self>) {
-        let splits = self.splits;
+        let setup = self.setup;
         let (left, right) = self.base.split();
 
-        let left = Self { base: left, splits };
-        let right = right.map(|base| Self { base, splits });
+        let left = Self {
+            base: left,
+            setup: setup.clone(),
+        };
+        let right = right.map(|base| Self { base, setup });
 
         (left, right)
     }
@@ -181,7 +181,7 @@ where
     }
 }
 
-impl<P> IndexedProducer for SplitsProducer<P>
+impl<P> IndexedProducer for SetupIterProducer<P>
 where
     P: IndexedProducer,
 {
@@ -197,14 +197,14 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let splits = self.splits;
+        let setup = self.setup;
         let (left, right) = self.base.split_at(index);
 
-        let left = Self { base: left, splits };
-        let right = Self {
-            base: right,
-            splits,
+        let left = Self {
+            base: left,
+            setup: setup.clone(),
         };
+        let right = Self { base: right, setup };
 
         (left, right)
     }
@@ -217,26 +217,23 @@ where
     }
 }
 
-/* SplitsConsumer */
+/* SetupIterConsumer */
 
-struct SplitsConsumer<C> {
+struct SetupIterConsumer<C> {
     base: C,
-    splits: usize,
+    setup: Setup,
 }
 
-impl<C> WithSetup for SplitsConsumer<C>
+impl<C> WithSetup for SetupIterConsumer<C>
 where
     C: WithSetup,
 {
     fn setup(&self) -> Setup {
-        self.base.setup().merge(Setup {
-            splits: Some(self.splits),
-            ..Default::default()
-        })
+        self.base.setup().merge(self.setup.clone())
     }
 }
 
-impl<C, I> Consumer<I> for SplitsConsumer<C>
+impl<C, I> Consumer<I> for SetupIterConsumer<C>
 where
     C: Consumer<I>,
 {
@@ -245,27 +242,27 @@ where
     type Result = C::Result;
 
     fn split(self) -> (Self, Self, Self::Reducer) {
-        let splits = self.splits;
+        let setup = self.setup;
         let (left, right, reducer) = self.base.split();
 
-        let left = Self { base: left, splits };
-        let right = Self {
-            base: right,
-            splits,
+        let left = Self {
+            base: left,
+            setup: setup.clone(),
         };
+        let right = Self { base: right, setup };
 
         (left, right, reducer)
     }
 
     fn split_at(self, index: usize) -> (Self, Self, Self::Reducer) {
-        let splits = self.splits;
+        let setup = self.setup;
         let (left, right, reducer) = self.base.split_at(index);
 
-        let left = Self { base: left, splits };
-        let right = Self {
-            base: right,
-            splits,
+        let left = Self {
+            base: left,
+            setup: setup.clone(),
         };
+        let right = Self { base: right, setup };
 
         (left, right, reducer)
     }

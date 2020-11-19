@@ -2,7 +2,8 @@ use std::cmp::{Ord, Ordering};
 use std::iter::IntoIterator;
 
 use super::{
-    Consumer, Executor, FromParallelIterator, IntoParallelIterator, Reducer, WithIndexedProducer,
+    Consumer, Executor, FromParallelIterator, IntoParallelIterator, Reducer, Setup,
+    WithIndexedProducer,
 };
 
 use crate::{
@@ -35,8 +36,8 @@ use crate::{
         product::Product,
         reduce::{Reduce, ReduceWith},
         rev::Rev,
+        setup::SetupIter,
         skip::Skip,
-        splits::Splits,
         step_by::StepBy,
         sum::Sum,
         take::Take,
@@ -1734,8 +1735,14 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// assert!(min >= 1234);
     /// ```
-    fn with_splits(self, splits: usize) -> Splits<Self> {
-        Splits::new(self, splits)
+    fn with_splits(self, splits: usize) -> SetupIter<Self> {
+        SetupIter::new(
+            self,
+            Setup {
+                splits: Some(splits),
+                ..Default::default()
+            },
+        )
     }
 }
 
@@ -2224,5 +2231,71 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     fn rev(self) -> Rev<Self> {
         Rev::new(self)
+    }
+
+    /// Sets the minimum length of iterators desired to process in each
+    /// thread.  Rayon will not split any smaller than this length, but
+    /// of course an iterator could already be smaller to begin with.
+    ///
+    /// Producers like `zip` and `interleave` will use greater of the two
+    /// minimums.
+    /// Chained iterators and iterators inside `flat_map` may each use
+    /// their own minimum length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let min = (0..1_000_000)
+    ///     .into_par_iter()
+    ///     .with_min_len(1234)
+    ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
+    ///     .min().unwrap();
+    ///
+    /// assert!(min >= 1234);
+    /// ```
+    fn with_min_len(self, min: usize) -> SetupIter<Self> {
+        SetupIter::new(
+            self,
+            Setup {
+                min_len: Some(min),
+                ..Default::default()
+            },
+        )
+    }
+
+    /// Sets the maximum length of iterators desired to process in each
+    /// thread.  Rayon will try to split at least below this length,
+    /// unless that would put it below the length from `with_min_len()`.
+    /// For example, given min=10 and max=15, a length of 16 will not be
+    /// split any further.
+    ///
+    /// Producers like `zip` and `interleave` will use lesser of the two
+    /// maximums.
+    /// Chained iterators and iterators inside `flat_map` may each use
+    /// their own maximum length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rayon::prelude::*;
+    ///
+    /// let max = (0..1_000_000)
+    ///     .into_par_iter()
+    ///     .with_max_len(1234)
+    ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
+    ///     .max().unwrap();
+    ///
+    /// assert!(max <= 1234);
+    /// ```
+    fn with_max_len(self, max: usize) -> SetupIter<Self> {
+        SetupIter::new(
+            self,
+            Setup {
+                max_len: Some(max),
+                ..Default::default()
+            },
+        )
     }
 }
