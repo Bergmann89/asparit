@@ -1,8 +1,15 @@
 [package]
 name = "asparit"
 version = "0.1.0"
-authors = ["Bergmann89 <info@bergmann89.de>"]
+authors = [ "Bergmann89 <info@bergmann89.de>" ]
+description = "Async Parallel Iterators for Rust"
 edition = "2018"
+license = "Apache-2.0/MIT"
+repository = "https://github.com/Bergmann89/asparit"
+documentation = "https://docs.rs/rayon/"
+readme = "README.md"
+keywords = [ "parallel", "thread", "concurrency", "join", "performance" ]
+categories = [ "concurrency" ]
 
 [features]
 default = [ "sequential-executor" ]
