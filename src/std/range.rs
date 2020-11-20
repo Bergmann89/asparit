@@ -20,7 +20,7 @@ use crate::{
 ///     .filter(|&(x, y)| x % 5 == 0 || y % 5 == 0)
 ///     .map(|(x, y)| x * y)
 ///     .sum::<usize>()
-///     .exec_with(SimpleExecutor);
+///     .exec();
 ///
 /// let s = (0..25usize)
 ///     .zip(0..25)

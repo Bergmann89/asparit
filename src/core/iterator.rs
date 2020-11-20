@@ -145,7 +145,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// (0..5)
     ///     .into_par_iter()
     ///     .for_each_with(sender, |s, x| s.send(x).unwrap())
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// let mut res: Vec<_> = receiver.iter().collect();
     ///
@@ -194,7 +194,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// (0..100)
     ///     .into_par_iter()
     ///     .try_for_each(|x| writeln!(io::stdout(), "{:?}", x))
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .expect("expected no write errors");
     /// ```
     fn try_for_each<O, T>(self, operation: O) -> TryForEach<Self, O>
@@ -225,7 +225,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// (0..5)
     ///     .into_par_iter()
     ///     .try_for_each_with(sender, |s, x| s.send(x))
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .expect("expected no send errors");
     ///
     /// let mut res: Vec<_> = receiver.iter().collect();
@@ -267,7 +267,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     /// use asparit::*;
     ///
-    /// let count = (0..100).into_par_iter().count().exec_with(SimpleExecutor);
+    /// let count = (0..100).into_par_iter().count().exec();
     ///
     /// assert_eq!(count, 100);
     /// ```
@@ -285,7 +285,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let mut par_iter = (0..5).into_par_iter().map(|x| x * 2);
     ///
-    /// let doubles: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let doubles: Vec<_> = par_iter.collect().exec();
     ///
     /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -319,7 +319,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         x // returning i32
     ///     })
     ///     .collect() // collecting the returned values into a vector
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// let mut b: Vec<_> = receiver
     ///     .iter() // iterating over the values in the channel
@@ -365,10 +365,10 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 2, 3];
     ///
-    /// let v_cloned: Vec<_> = a.par_iter().cloned().collect().exec_with(SimpleExecutor);
+    /// let v_cloned: Vec<_> = a.par_iter().cloned().collect().exec();
     ///
     /// // cloned is the same as .map(|&x| x), for integers
-    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec_with(SimpleExecutor);
+    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec();
     ///
     /// assert_eq!(v_cloned, vec![1, 2, 3]);
     /// assert_eq!(v_map, vec![1, 2, 3]);
@@ -394,10 +394,10 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 2, 3];
     ///
-    /// let v_copied: Vec<_> = a.par_iter().copied().collect().exec_with(SimpleExecutor);
+    /// let v_copied: Vec<_> = a.par_iter().copied().collect().exec();
     ///
     /// // copied is the same as .map(|&x| x), for integers
-    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec_with(SimpleExecutor);
+    /// let v_map: Vec<_> = a.par_iter().map(|&x| x).collect().exec();
     ///
     /// assert_eq!(v_copied, vec![1, 2, 3]);
     /// assert_eq!(v_map, vec![1, 2, 3]);
@@ -427,7 +427,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .cloned()
     ///     .filter(|&x| x % 2 == 0)
     ///     .reduce(|| 0, |sum, i| sum + i)
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// println!("{}", sum);
     ///
@@ -439,7 +439,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .filter(|&x| x % 2 == 0)
     ///     .inspect(|x| println!("made it through filter: {}", x))
     ///     .reduce(|| 0, |sum, i| sum + i)
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// println!("{}", sum);
     /// ```
@@ -461,7 +461,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     *x *= 2;
     /// });
     ///
-    /// let doubles: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let doubles: Vec<_> = par_iter.collect().exec();
     ///
     /// assert_eq!(&doubles[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -482,7 +482,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let mut par_iter = (0..10).into_par_iter().filter(|x| x % 2 == 0);
     ///
-    /// let even_numbers: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let even_numbers: Vec<_> = par_iter.collect().exec();
     ///
     /// assert_eq!(&even_numbers[..], &[0, 2, 4, 6, 8]);
     /// ```
@@ -506,7 +506,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         .into_par_iter()
     ///         .filter_map(|x| if x % 2 == 0 { Some(x * 3) } else { None });
     ///
-    /// let even_numbers: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let even_numbers: Vec<_> = par_iter.collect().exec();
     ///
     /// assert_eq!(&even_numbers[..], &[0, 6, 12, 18, 24]);
     /// ```
@@ -551,7 +551,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     std::iter::from_fn(move || cell_iter.borrow_mut().next())
     /// });
     ///
-    /// let vec: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let vec: Vec<_> = par_iter.collect().exec();
     ///
     /// assert_eq!(&vec[..], &[1, 2, 3, 4, 5, 6, 7, 8]);
     /// ```
@@ -576,11 +576,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let x: Vec<Vec<_>> = vec![vec![1, 2], vec![3, 4]];
     /// let iters: Vec<_> = x.into_iter().map(Vec::into_iter).collect();
-    /// let y: Vec<_> = iters
-    ///     .into_par_iter()
-    ///     .flatten_iter()
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let y: Vec<_> = iters.into_par_iter().flatten_iter().collect().exec();
     ///
     /// assert_eq!(y, vec![1, 2, 3, 4]);
     /// ```
@@ -614,7 +610,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         || (0, 0), // the "identity" is 0 in both columns
     ///         |a, b| (a.0 + b.0, a.1 + b.1),
     ///     )
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
     /// ```
     ///
@@ -649,7 +645,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .par_iter() // iterating over &(i32, i32)
     ///     .cloned() // iterating over (i32, i32)
     ///     .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1))
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .unwrap();
     /// assert_eq!(sums, (0 + 5 + 16 + 8, 1 + 6 + 2 + 9));
     /// ```
@@ -689,7 +685,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     iter.into_par_iter()
     ///         .map(|i| i.checked_mul(i)) // square each item,
     ///         .try_reduce(|| 0, i32::checked_add) // and add them up!
-    ///         .exec_with(SimpleExecutor)
+    ///         .exec()
     /// }
     /// assert_eq!(sum_squares(0..5), Some(0 + 1 + 4 + 9 + 16));
     ///
@@ -739,7 +735,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .map(|path| std::fs::metadata(path).map(|m| (path, m.len())))
     ///     .try_reduce_with(|a, b| Ok(if a.1 >= b.1 { a } else { b }))
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .expect("Some value, since the iterator is not empty")
     ///     .expect_err("not found");
     /// ```
@@ -837,7 +833,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///             a
     ///         },
     ///     )
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(s, "abcde");
     /// ```
@@ -867,7 +863,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///             a
     ///         },
     ///     )
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(s, "abcde");
     /// ```
@@ -897,7 +893,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .fold(|| 0_u32, |a: u32, b: u8| a + (b as u32))
     ///     .sum::<u32>()
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(sum, (0..22).sum()); // compare to sequential
     /// ```
@@ -927,7 +923,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .fold_with(0_u32, |a: u32, b: u8| a + (b as u32))
     ///     .sum::<u32>()
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(sum, (0..22).sum()); // compare to sequential
     /// ```
@@ -962,7 +958,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .try_fold(|| 0_u32, |a: u32, b: u8| a.checked_add(b as u32))
     ///     .try_reduce(|| 0, u32::checked_add)
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
     /// ```
@@ -991,7 +987,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .try_fold_with(0_u32, |a: u32, b: u8| a.checked_add(b as u32))
     ///     .try_reduce(|| 0, u32::checked_add)
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(sum, Some((0..22).sum())); // compare to sequential
     /// ```
@@ -1024,7 +1020,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 5, 7];
     ///
-    /// let sum: i32 = a.par_iter().sum().exec_with(SimpleExecutor);
+    /// let sum: i32 = a.par_iter().sum().exec();
     ///
     /// assert_eq!(sum, 13);
     /// ```
@@ -1054,10 +1050,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// use asparit::*;
     ///
     /// fn factorial(n: u32) -> u32 {
-    ///     (1..n + 1)
-    ///         .into_par_iter()
-    ///         .product()
-    ///         .exec_with(SimpleExecutor)
+    ///     (1..n + 1).into_par_iter().product().exec()
     /// }
     ///
     /// assert_eq!(factorial(0), 1);
@@ -1088,11 +1081,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [45, 74, 32];
     ///
-    /// assert_eq!(a.par_iter().min().exec_with(SimpleExecutor), Some(&32));
+    /// assert_eq!(a.par_iter().min().exec(), Some(&32));
     ///
     /// let b: [i32; 0] = [];
     ///
-    /// assert_eq!(b.par_iter().min().exec_with(SimpleExecutor), None);
+    /// assert_eq!(b.par_iter().min().exec(), None);
     /// ```
     fn min(self) -> Min<Self>
     where
@@ -1116,12 +1109,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [-3_i32, 77, 53, 240, -1];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .min_by(|x, y| x.cmp(y))
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&-3)
-    /// );
+    /// assert_eq!(a.par_iter().min_by(|x, y| x.cmp(y)).exec(), Some(&-3));
     /// ```
     fn min_by<O>(self, operation: O) -> MinBy<Self, O>
     where
@@ -1145,12 +1133,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .min_by_key(|x| x.abs())
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&2)
-    /// );
+    /// assert_eq!(a.par_iter().min_by_key(|x| x.abs()).exec(), Some(&2));
     /// ```
     fn min_by_key<O, K>(self, operation: O) -> MinByKey<Self, O>
     where
@@ -1177,11 +1160,11 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [45, 74, 32];
     ///
-    /// assert_eq!(a.par_iter().max().exec_with(SimpleExecutor), Some(&74));
+    /// assert_eq!(a.par_iter().max().exec(), Some(&74));
     ///
     /// let b: [i32; 0] = [];
     ///
-    /// assert_eq!(b.par_iter().max().exec_with(SimpleExecutor), None);
+    /// assert_eq!(b.par_iter().max().exec(), None);
     /// ```
     fn max(self) -> Max<Self>
     where
@@ -1206,9 +1189,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// let a = [-3_i32, 77, 53, 240, -1];
     ///
     /// assert_eq!(
-    ///     a.par_iter()
-    ///         .max_by(|x, y| x.abs().cmp(&y.abs()))
-    ///         .exec_with(SimpleExecutor),
+    ///     a.par_iter().max_by(|x, y| x.abs().cmp(&y.abs())).exec(),
     ///     Some(&240)
     /// );
     /// ```
@@ -1234,12 +1215,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [-3_i32, 34, 2, 5, -10, -3, -23];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .max_by_key(|x| x.abs())
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&34)
-    /// );
+    /// assert_eq!(a.par_iter().max_by_key(|x| x.abs()).exec(), Some(&34));
     /// ```
     fn max_by_key<O, K>(self, operation: O) -> MaxByKey<Self, O>
     where
@@ -1261,7 +1237,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let par_iter = a.par_iter().chain(b.par_iter());
     ///
-    /// let chained: Vec<_> = par_iter.cloned().collect().exec_with(SimpleExecutor);
+    /// let chained: Vec<_> = par_iter.cloned().collect().exec();
     ///
     /// assert_eq!(&chained[..], &[0, 1, 2, 9, 8, 7]);
     /// ```
@@ -1291,19 +1267,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_any(|&&x| x == 3)
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&3)
-    /// );
+    /// assert_eq!(a.par_iter().find_any(|&&x| x == 3).exec(), Some(&3));
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_any(|&&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().find_any(|&&x| x == 100).exec(), None);
     /// ```
     fn find_any<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1331,19 +1297,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_first(|&&x| x == 3)
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&3)
-    /// );
+    /// assert_eq!(a.par_iter().find_first(|&&x| x == 3).exec(), Some(&3));
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_first(|&&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().find_first(|&&x| x == 100).exec(), None);
     /// ```
     fn find_first<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1370,19 +1326,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_last(|&&x| x == 3)
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(&3)
-    /// );
+    /// assert_eq!(a.par_iter().find_last(|&&x| x == 3).exec(), Some(&3));
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .find_last(|&&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().find_last(|&&x| x == 100).exec(), None);
     /// ```
     fn find_last<O>(self, operation: O) -> Find<Self, O>
     where
@@ -1410,10 +1356,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let c = ["lol", "NaN", "5", "5"];
     ///
-    /// let found_number = c
-    ///     .par_iter()
-    ///     .find_map_any(|s| s.parse().ok())
-    ///     .exec_with(SimpleExecutor);
+    /// let found_number = c.par_iter().find_map_any(|s| s.parse().ok()).exec();
     ///
     /// assert_eq!(found_number, Some(5));
     /// ```
@@ -1444,10 +1387,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let c = ["lol", "NaN", "2", "5"];
     ///
-    /// let first_number = c
-    ///     .par_iter()
-    ///     .find_map_first(|s| s.parse().ok())
-    ///     .exec_with(SimpleExecutor);
+    /// let first_number = c.par_iter().find_map_first(|s| s.parse().ok()).exec();
     ///
     /// assert_eq!(first_number, Some(2));
     /// ```
@@ -1478,10 +1418,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let c = ["lol", "NaN", "2", "5"];
     ///
-    /// let last_number = c
-    ///     .par_iter()
-    ///     .find_map_last(|s| s.parse().ok())
-    ///     .exec_with(SimpleExecutor);
+    /// let last_number = c.par_iter().find_map_last(|s| s.parse().ok()).exec();
     ///
     /// assert_eq!(last_number, Some(5));
     /// ```
@@ -1506,7 +1443,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [0, 12, 3, 4, 0, 23, 0];
     ///
-    /// let is_valid = a.par_iter().any(|&x| x > 10).exec_with(SimpleExecutor);
+    /// let is_valid = a.par_iter().any(|&x| x > 10).exec();
     ///
     /// assert!(is_valid);
     /// ```
@@ -1528,7 +1465,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [0, 12, 3, 4, 0, 23, 0];
     ///
-    /// let is_valid = a.par_iter().all(|&x| x > 10).exec_with(SimpleExecutor);
+    /// let is_valid = a.par_iter().all(|&x| x > 10).exec();
     ///
     /// assert!(!is_valid);
     /// ```
@@ -1561,9 +1498,9 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     })
     ///     .while_some()
     ///     .max()
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
-    /// assert!(value == Some(1023));
+    /// assert!(value < Some(1024));
     /// assert!(counter.load(Ordering::SeqCst) < 2048); // should not have visited every single one
     /// ```
     fn while_some<T>(self) -> WhileSome<Self>
@@ -1603,7 +1540,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         thread::sleep(time::Duration::from_secs(1));
     ///         assert!(i > 0); // oops!
     ///     })
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     /// ```
     fn panic_fuse(self) -> PanicFuse<Self> {
         PanicFuse::new(self)
@@ -1629,7 +1566,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let sync_vec: Vec<_> = (0..100).into_iter().collect();
     ///
-    /// let async_vec: Vec<_> = (0..100).into_par_iter().collect().exec_with(SimpleExecutor);
+    /// let async_vec: Vec<_> = (0..100).into_par_iter().collect().exec();
     ///
     /// assert_eq!(sync_vec, async_vec);
     /// ```
@@ -1655,7 +1592,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///
     /// let a = [(0, 1), (1, 2), (2, 3), (3, 4)];
     ///
-    /// let (left, right): (Vec<_>, Vec<_>) = a.par_iter().cloned().unzip().exec_with(SimpleExecutor);
+    /// let (left, right): (Vec<_>, Vec<_>) = a.par_iter().cloned().unzip().exec();
     ///
     /// assert_eq!(left, [0, 1, 2, 3]);
     /// assert_eq!(right, [1, 2, 3, 4]);
@@ -1670,7 +1607,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .map(|i| (i, i * i, i * i * i))
     ///     .unzip()
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(values, [0, 1, 2, 3]);
     /// assert_eq!(squares, [0, 1, 4, 9]);
@@ -1694,10 +1631,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// ```
     /// use asparit::*;
     ///
-    /// let (left, right): (Vec<_>, Vec<_>) = (0..8)
-    ///     .into_par_iter()
-    ///     .partition(|x| x % 2 == 0)
-    ///     .exec_with(SimpleExecutor);
+    /// let (left, right): (Vec<_>, Vec<_>) = (0..8).into_par_iter().partition(|x| x % 2 == 0).exec();
     ///
     /// assert_eq!(left, [0, 2, 4, 6]);
     /// assert_eq!(right, [1, 3, 5, 7]);
@@ -1727,7 +1661,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///             (None, Some(x * 3))
     ///         }
     ///     })
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(left, [0, 8, 16, 24]);
     /// assert_eq!(right, [3, 9, 15, 21]);
@@ -1746,7 +1680,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///         (_, 0) => (None, None, Some(x), None),
     ///         (_, _) => (None, None, None, Some(x)),
     ///     })
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(fizzbuzz, [15]);
     /// assert_eq!(fizz, [3, 6, 9, 12, 18]);
@@ -1765,11 +1699,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     /// use asparit::*;
     ///
     /// let x = vec![1, 2, 3];
-    /// let r: Vec<_> = x
-    ///     .into_par_iter()
-    ///     .intersperse(-1)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let r: Vec<_> = x.into_par_iter().intersperse(-1).collect().exec();
     ///
     /// assert_eq!(r, vec![1, -1, 2, -1, 3]);
     /// ```
@@ -1791,7 +1721,7 @@ pub trait ParallelIterator<'a>: Sized + Send {
     ///     .into_par_iter()
     ///     .with_splits(8)
     ///     .for_each(|_| println!("Thread ID: {:?}", std::thread::current().id()))
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     /// ```
     fn with_splits(self, splits: usize) -> SetupIter<Self> {
         SetupIter::new(
@@ -1842,7 +1772,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// let par_iter = (0..100).into_par_iter().zip(vec![0; 10]);
     /// assert_eq!(par_iter.len_hint(), 10);
     ///
-    /// let vec: Vec<_> = par_iter.collect().exec_with(SimpleExecutor);
+    /// let vec: Vec<_> = par_iter.collect().exec();
     /// assert_eq!(vec.len(), 10);
     /// ```
     fn len_hint(&self) -> usize;
@@ -1862,7 +1792,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///     .into_par_iter()
     ///     .zip(vec!['a', 'b', 'c'])
     ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    ///     .exec();
     ///
     /// assert_eq!(result, [(1, 'a'), (2, 'b'), (3, 'c')]);
     /// ```
@@ -1888,10 +1818,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// let two_iter = two.par_iter();
     ///
     /// // this will panic
-    /// let zipped: Vec<(&u8, &u8)> = one_iter
-    ///     .zip_eq(two_iter)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let zipped: Vec<(&u8, &u8)> = one_iter.zip_eq(two_iter).collect().exec();
     ///
     /// // we should never get here
     /// assert_eq!(1, zipped.len());
@@ -1923,11 +1850,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     /// let (x, y) = (vec![1, 2], vec![3, 4, 5, 6]);
-    /// let r: Vec<i32> = x
-    ///     .into_par_iter()
-    ///     .interleave(y)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let r: Vec<i32> = x.into_par_iter().interleave(y).collect().exec();
     /// assert_eq!(r, vec![1, 3, 2, 4, 5, 6]);
     /// ```
     fn interleave<X>(self, other: X) -> Interleave<Self, X::Iter>
@@ -1946,11 +1869,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     /// let (x, y) = (vec![1, 2, 3, 4], vec![5, 6]);
-    /// let r: Vec<i32> = x
-    ///     .into_par_iter()
-    ///     .interleave_shortest(y)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let r: Vec<i32> = x.into_par_iter().interleave_shortest(y).collect().exec();
     /// assert_eq!(r, vec![1, 5, 2, 6, 3]);
     /// ```
     fn interleave_shortest<X, I>(self, other: X) -> Interleave<Take<Self>, Take<X::Iter>>
@@ -1990,11 +1909,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     /// let a = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    /// let r: Vec<Vec<i32>> = a
-    ///     .into_par_iter()
-    ///     .chunks(3)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let r: Vec<Vec<i32>> = a.into_par_iter().chunks(3).collect().exec();
     /// assert_eq!(
     ///     r,
     ///     vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9], vec![10]]
@@ -2016,18 +1931,9 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// use std::cmp::Ordering::*;
     ///
     /// let x = vec![1, 2, 3];
-    /// assert_eq!(
-    ///     x.par_iter().cmp(&vec![1, 3, 0]).exec_with(SimpleExecutor),
-    ///     Less
-    /// );
-    /// assert_eq!(
-    ///     x.par_iter().cmp(&vec![1, 2, 3]).exec_with(SimpleExecutor),
-    ///     Equal
-    /// );
-    /// assert_eq!(
-    ///     x.par_iter().cmp(&vec![1, 2]).exec_with(SimpleExecutor),
-    ///     Greater
-    /// );
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 3, 0]).exec(), Less);
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 2, 3]).exec(), Equal);
+    /// assert_eq!(x.par_iter().cmp(&vec![1, 2]).exec(), Greater);
     /// ```
     fn cmp<X>(self, other: X) -> Cmp<Self, X::Iter>
     where
@@ -2050,29 +1956,18 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///
     /// let x = vec![1.0, 2.0, 3.0];
     /// assert_eq!(
-    ///     x.par_iter()
-    ///         .partial_cmp(&vec![1.0, 3.0, 0.0])
-    ///         .exec_with(SimpleExecutor),
+    ///     x.par_iter().partial_cmp(&vec![1.0, 3.0, 0.0]).exec(),
     ///     Some(Less)
     /// );
     /// assert_eq!(
-    ///     x.par_iter()
-    ///         .partial_cmp(&vec![1.0, 2.0, 3.0])
-    ///         .exec_with(SimpleExecutor),
+    ///     x.par_iter().partial_cmp(&vec![1.0, 2.0, 3.0]).exec(),
     ///     Some(Equal)
     /// );
     /// assert_eq!(
-    ///     x.par_iter()
-    ///         .partial_cmp(&vec![1.0, 2.0])
-    ///         .exec_with(SimpleExecutor),
+    ///     x.par_iter().partial_cmp(&vec![1.0, 2.0]).exec(),
     ///     Some(Greater)
     /// );
-    /// assert_eq!(
-    ///     x.par_iter()
-    ///         .partial_cmp(&vec![1.0, NAN])
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(x.par_iter().partial_cmp(&vec![1.0, NAN]).exec(), None);
     /// ```
     fn partial_cmp<X>(self, other: X) -> PartialCmp<Self, X::Iter>
     where
@@ -2167,11 +2062,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// use asparit::*;
     ///
     /// let chars = vec!['a', 'b', 'c'];
-    /// let result: Vec<_> = chars
-    ///     .into_par_iter()
-    ///     .enumerate()
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let result: Vec<_> = chars.into_par_iter().enumerate().collect().exec();
     ///
     /// assert_eq!(result, [(0, 'a'), (1, 'b'), (2, 'c')]);
     /// ```
@@ -2187,11 +2078,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// use asparit::*;
     ///
     /// let range = (3..10);
-    /// let result: Vec<i32> = range
-    ///     .into_par_iter()
-    ///     .step_by(3)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let result: Vec<i32> = range.into_par_iter().step_by(3).collect().exec();
     ///
     /// assert_eq!(result, [3, 6, 9])
     /// ```
@@ -2206,11 +2093,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     ///
-    /// let result: Vec<_> = (0..100)
-    ///     .into_par_iter()
-    ///     .skip(95)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let result: Vec<_> = (0..100).into_par_iter().skip(95).collect().exec();
     ///
     /// assert_eq!(result, [95, 96, 97, 98, 99]);
     /// ```
@@ -2225,11 +2108,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     ///
-    /// let result: Vec<_> = (0..100)
-    ///     .into_par_iter()
-    ///     .take(5)
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let result: Vec<_> = (0..100).into_par_iter().take(5).collect().exec();
     ///
     /// assert_eq!(result, [0, 1, 2, 3, 4]);
     /// ```
@@ -2253,16 +2132,11 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// let i = a
     ///     .par_iter()
     ///     .position_any(|&x| x == 3)
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .expect("found");
     /// assert!(i == 2 || i == 3);
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .position_any(|&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().position_any(|&x| x == 100).exec(), None);
     /// ```
     fn position_any<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2291,19 +2165,9 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .position_first(|&x| x == 3)
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(2)
-    /// );
+    /// assert_eq!(a.par_iter().position_first(|&x| x == 3).exec(), Some(2));
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .position_first(|&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().position_first(|&x| x == 100).exec(), None);
     /// ```
     fn position_first<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2332,19 +2196,9 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///
     /// let a = [1, 2, 3, 3];
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .position_last(|&x| x == 3)
-    ///         .exec_with(SimpleExecutor),
-    ///     Some(3)
-    /// );
+    /// assert_eq!(a.par_iter().position_last(|&x| x == 3).exec(), Some(3));
     ///
-    /// assert_eq!(
-    ///     a.par_iter()
-    ///         .position_last(|&x| x == 100)
-    ///         .exec_with(SimpleExecutor),
-    ///     None
-    /// );
+    /// assert_eq!(a.par_iter().position_last(|&x| x == 100).exec(), None);
     /// ```
     fn position_last<O>(self, operation: O) -> Position<Self, O>
     where
@@ -2361,11 +2215,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     /// ```
     /// use asparit::*;
     ///
-    /// let result: Vec<_> = (0..5)
-    ///     .into_par_iter()
-    ///     .rev()
-    ///     .collect()
-    ///     .exec_with(SimpleExecutor);
+    /// let result: Vec<_> = (0..5).into_par_iter().rev().collect().exec();
     ///
     /// assert_eq!(result, [4, 3, 2, 1, 0]);
     /// ```
@@ -2392,7 +2242,7 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///     .with_min_len(1234)
     ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
     ///     .min()
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .unwrap();
     ///
     /// assert!(min >= 1234);
@@ -2428,8 +2278,10 @@ pub trait IndexedParallelIterator<'a>: ParallelIterator<'a> {
     ///     .with_max_len(1234)
     ///     .fold(|| 0, |acc, _| acc + 1) // count how many are in this segment
     ///     .max()
-    ///     .exec_with(SimpleExecutor)
+    ///     .exec()
     ///     .unwrap();
+    ///
+    /// assert!(max <= 1234);
     /// ```
     fn with_max_len(self, max: usize) -> SetupIter<Self> {
         SetupIter::new(

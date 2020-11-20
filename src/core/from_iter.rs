@@ -45,10 +45,7 @@ use super::{Executor, IntoParallelIterator};
 ///     }
 /// }
 ///
-/// let bh: BlackHole = (0i32..1000)
-///     .into_par_iter()
-///     .collect()
-///     .exec_with(SimpleExecutor);
+/// let bh: BlackHole = (0i32..1000).into_par_iter().collect().exec();
 /// assert_eq!(bh.mass, 4000);
 /// ```
 pub trait FromParallelIterator<'a, I>: Send + Sized

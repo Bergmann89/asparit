@@ -403,6 +403,9 @@ where
     where
         X: IntoIterator<Item = T>,
     {
+        let fuse = self.fuse.clone();
+        let iter = iter.into_iter().take_while(move |_| !fuse.panicked());
+
         self.base = self.base.consume_iter(iter);
 
         self

@@ -37,7 +37,7 @@ pub trait ParallelDrainFull<'a> {
     ///     heap.par_drain()
     ///         .inspect(|x| assert!(squares.contains(x)))
     ///         .count()
-    ///         .exec_with(SimpleExecutor),
+    ///         .exec(),
     ///     squares.len(),
     /// );
     /// assert!(heap.is_empty());
@@ -76,10 +76,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     ///
     /// println!("RangeFull");
     /// let mut vec = squares.clone();
-    /// assert!(vec
-    ///     .par_drain(..)
-    ///     .eq(squares.par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    /// assert!(vec.par_drain(..).eq(squares.par_iter().copied()).exec());
     /// assert!(vec.is_empty());
     /// assert!(vec.capacity() >= squares.len());
     ///
@@ -88,7 +85,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     /// assert!(vec
     ///     .par_drain(5..)
     ///     .eq(squares[5..].par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    ///     .exec());
     /// assert_eq!(&vec[..], &squares[..5]);
     /// assert!(vec.capacity() >= squares.len());
     ///
@@ -97,7 +94,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     /// assert!(vec
     ///     .par_drain(..5)
     ///     .eq(squares[..5].par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    ///     .exec());
     /// assert_eq!(&vec[..], &squares[5..]);
     /// assert!(vec.capacity() >= squares.len());
     ///
@@ -106,7 +103,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     /// assert!(vec
     ///     .par_drain(..=5)
     ///     .eq(squares[..=5].par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    ///     .exec());
     /// assert_eq!(&vec[..], &squares[6..]);
     /// assert!(vec.capacity() >= squares.len());
     ///
@@ -115,7 +112,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     /// assert!(vec
     ///     .par_drain(3..7)
     ///     .eq(squares[3..7].par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    ///     .exec());
     /// assert_eq!(&vec[..3], &squares[..3]);
     /// assert_eq!(&vec[3..], &squares[7..]);
     /// assert!(vec.capacity() >= squares.len());
@@ -125,7 +122,7 @@ pub trait ParallelDrainRange<'a, Idx = usize> {
     /// assert!(vec
     ///     .par_drain(3..=7)
     ///     .eq(squares[3..=7].par_iter().copied())
-    ///     .exec_with(SimpleExecutor));
+    ///     .exec());
     /// assert_eq!(&vec[..3], &squares[..3]);
     /// assert_eq!(&vec[3..], &squares[8..]);
     /// assert!(vec.capacity() >= squares.len());

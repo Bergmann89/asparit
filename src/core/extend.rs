@@ -113,10 +113,10 @@ use super::{Consumer, Driver, Executor, IntoParallelIterator, ParallelIterator, 
 ///
 /// let mut bh = BlackHole { mass: 0 };
 ///
-/// bh.par_extend(0i32..1000).exec_with(SimpleExecutor);
+/// bh.par_extend(0i32..1000).exec();
 /// assert_eq!(bh.mass, 4000);
 ///
-/// bh.par_extend(0i64..10).exec_with(SimpleExecutor);
+/// bh.par_extend(0i64..10).exec();
 /// assert_eq!(bh.mass, 4080);
 /// ```
 pub trait ParallelExtend<'a, I, T>: Send + Sized
