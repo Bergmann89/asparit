@@ -1,4 +1,6 @@
-use crate::{DefaultExecutor, Executor};
+#[cfg(feature = "default-executor")]
+use crate::DefaultExecutor;
+use crate::Executor;
 
 pub trait Driver<'a, T1, T2 = (), T3 = ()>: Sized
 where
@@ -10,6 +12,7 @@ where
     where
         E: Executor<'a, T1, T2, T3>;
 
+    #[cfg(feature = "default-executor")]
     fn exec(self) -> <DefaultExecutor as Executor<'a, T1, T2, T3>>::Result {
         self.exec_with(DefaultExecutor::default())
     }

@@ -5,9 +5,11 @@ authors = ["Bergmann89 <info@bergmann89.de>"]
 edition = "2018"
 
 [features]
-default = [ "rayon-executor" ]
-rayon-executor = [ "rayon-core" ]
-tokio-executor = [ "futures", "num_cpus", "tokio" ]
+default = [ "sequential-executor" ]
+default-executor = [ ]
+rayon-executor = [ "rayon-core", "default-executor" ]
+sequential-executor = [ "default-executor" ]
+tokio-executor = [ "futures", "num_cpus", "tokio", "default-executor" ]
 
 [dependencies]
 futures = { version = "0.3", optional = true }

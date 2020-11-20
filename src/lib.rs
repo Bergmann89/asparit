@@ -11,6 +11,12 @@ pub use self::core::{
     ParallelExtend, ParallelIterator, Producer, ProducerCallback, Reducer, Setup,
     WithIndexedProducer, WithProducer, WithSetup,
 };
+#[cfg(feature = "default-executor")]
+pub use self::executor::DefaultExecutor;
+#[cfg(feature = "rayon-executor")]
+pub use self::executor::RayonExecutor;
+#[cfg(feature = "sequential-executor")]
+pub use self::executor::SequentialExecutor;
 #[cfg(feature = "tokio-executor")]
 pub use self::executor::TokioExecutor;
-pub use self::executor::{DefaultExecutor, SimpleExecutor};
+pub use executor::{IndexedSplitter, Splitter};
