@@ -1,4 +1,3 @@
-use std::cmp;
 use std::mem::transmute;
 
 use futures::{
