@@ -1,7 +1,7 @@
 # AsParIt - Async Parallel Iterators
 
-[![Rayon crate](https://img.shields.io/crates/v/asparit.svg)](https://crates.io/crates/asparit)
-[![Rayon documentation](https://docs.rs/asparit/badge.svg)](https://docs.rs/asparit)
+[![asparit crate](https://img.shields.io/crates/v/asparit.svg)](https://crates.io/crates/asparit)
+[![asparit documentation](https://docs.rs/asparit/badge.svg)](https://docs.rs/asparit)
 
 Asparit implements async parallel iterators. It is mostly based on the idea and the code of
 [rayon][rayon]. If you need some more detailed information please refere to the documentation of
